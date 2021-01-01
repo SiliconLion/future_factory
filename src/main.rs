@@ -78,11 +78,11 @@ fn main() {
     print_errors(104);
 
     let vertex_source = shader::ShaderSource::from_file(
-            "/home/david/Desktop/programing/open-gl/glloadtest/src/shader_src/vertex.vert",
+            "src/shader_src/vertex.vert",
             gl::VERTEX_SHADER
         );
     let frag_source = shader::ShaderSource::from_file(
-        "/home/david/Desktop/programing/open-gl/glloadtest/src/shader_src/fragment.frag",
+        "src/shader_src/fragment.frag",
         gl::FRAGMENT_SHADER
     );
 

@@ -180,53 +180,6 @@ impl<V: Vertex> Geometry<V> {
         return geom;
     }
 
-    pub unsafe fn temp_from(usage: types::GLenum, vertices: &[V], indices: &[u32]) -> Geometry<V> {
-        let vertices:Vec<V> = vertices.clone().into();
-        let indices:Vec<u32> = indices.clone().into();
-
-        let mut VAO: u32 = 0;
-        gl::GenVertexArrays(1, &mut VAO);
-
-        let mut VBO: u32 = 0;
-        gl::GenBuffers(1, &mut VBO);
-        // gl::BindBuffer(gl::ARRAY_BUFFER, VBO);
-
-        let mut EBO = 0;
-        gl::GenBuffers(1, &mut EBO);
-
-
-        //set up the VAO calls 
-        gl::BindVertexArray(VAO);
-
-        gl::BindBuffer(gl::ARRAY_BUFFER, VBO);
-        gl::BufferData(gl::ARRAY_BUFFER, 
-            (vertices.len() * V::stride()) as isize, 
-            vertices.as_ptr() as _, 
-            usage
-        );
-
-        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, EBO);
-        gl::BufferData(gl::ARRAY_BUFFER, 
-            (vertices.len() * V::stride()) as isize, 
-            vertices.as_ptr() as _, 
-            usage
-        );
-
-        //this will set up the layout of the vertex.
-        V::enable_vertex_attributes();
-
-        //unbind
-        gl::BindVertexArray(0);
-
-        Geometry {
-            VAO,
-            VBO,
-            EBO,
-            vertices,
-            indices,
-            usage
-        }   
-    }
 
     // pub fn replace_verticies(&mut self, buffer: &[V]) {
     //     unimplemented!();
@@ -280,8 +233,12 @@ impl<V: Vertex> Geometry<V> {
     //simple drawing. not going to be the only way to draw
     pub unsafe fn draw(&self) {
         self.bind();
-        // gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, 0 as *const c_void);
-        gl::DrawArrays(gl::TRIANGLES, 0, 3);
+        gl::DrawElements(
+            gl::TRIANGLES, 
+            self.indices.len() as i32, 
+            gl::UNSIGNED_INT, 
+            0 as *const c_void
+        );
         self.unbind();
     }
 
