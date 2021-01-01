@@ -119,8 +119,14 @@ fn main() {
     // gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, (3 * float_size) as i32, 0 as *const c_void);
     // //tell big global state how the 0th vertex attribute is layed out
     // gl::EnableVertexAttribArray(0); 
+
+    
     ThreePoint::set_vertex_attributes();
     ThreePoint::enable_vertex_attributes();
+
+    let geom = Geometry {
+        VAO, VBO, EBO, vertices, indices, usage: gl::STATIC_DRAW
+    };
 
     print_errors(104);
 
@@ -151,9 +157,11 @@ fn main() {
         gl::Clear(gl::COLOR_BUFFER_BIT);
 
  
-        gl::BindVertexArray(VAO);
+        // gl::BindVertexArray(VAO);
         // gl::DrawArrays(gl::TRIANGLES, 0, 3);
-        gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, 0 as *const c_void);
+        // gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, 0 as *const c_void);
+
+        geom.draw();
 
         print_errors(147);
 
