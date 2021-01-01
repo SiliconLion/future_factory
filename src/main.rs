@@ -48,17 +48,7 @@ fn main() {
     let float_size = std::mem::size_of::<f32>();
 
     unsafe{
-    // print_errors(49);
 
-    // //create/bind the vertex array object.
-    // //VAO's store the calls to glVertexAttribPointer and glEnableVertexAttribArray so
-    // //you dont have to rebind all the attributes each time 
-    let mut VAO: u32 = 0;
-// 
-    gl::GenVertexArrays(1, &mut VAO);
-    // print_errors(56);
-    gl::BindVertexArray(VAO);
-    // print_errors(57);
 
 
     let vertices = vec![
@@ -77,56 +67,13 @@ fn main() {
         0, 1, 2,   // first triangle
     ];
 
-    // let geom : Geometry<ThreePoint> = Geometry::from_verts_and_indices(
-    //     gl::STATIC_DRAW,
-    //     &ThreePoint::from_float_buffer(&vertices[..])[..],
-    //     &indices[..]
-    // );
-
-    print_errors(70);
-    
-    let mut VBO: u32 = 0;
-
-    gl::GenBuffers(1, &mut VBO);
-    gl::BindBuffer(gl::ARRAY_BUFFER, VBO);
-    gl::BufferData(gl::ARRAY_BUFFER, 9 * float_size as isize, vertices.as_ptr() as _, gl::STATIC_DRAW );
-
-    // print_errors(77);
-        
-    let mut EBO: u32 = 0;
-    gl::GenBuffers(1, &mut EBO);
-    gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, EBO);
-    gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, (indices.len() * float_size ) as isize, indices.as_ptr() as _, gl::STATIC_DRAW); 
 
 
-    // print_errors(82);
-
-
-    //     //setting up the vertex layout
-    
-    // //0 tells it that its the first vertex attribute in the vertex.
-    // //3 peices of data per this attribute.
-    // //that data is floats.
-    // //we dont care about normalization. 
-    // //>"The fifth argument is known as the stride and tells us the space between consecutive 
-    // //>vertex attributes. Since the next set of position data is located exactly 
-    // //>n times the size of a float, we specify that value as the stride. 
-    // //>Note that since we know that the array is tightly packed (there is no 
-    // //>space between the next vertex attribute value) we could've also specified 
-    // //>the stride as 0 to let OpenGL determine the stride (this only works when values 
-    // //>are tightly packed). 
-    // //where the position data beins in the buffer
-    // gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, (3 * float_size) as i32, 0 as *const c_void);
-    // //tell big global state how the 0th vertex attribute is layed out
-    // gl::EnableVertexAttribArray(0); 
-
-    
-    ThreePoint::set_vertex_attributes();
-    ThreePoint::enable_vertex_attributes();
-
-    let geom = Geometry {
-        VAO, VBO, EBO, vertices, indices, usage: gl::STATIC_DRAW
-    };
+    let geom = Geometry::from_verts_and_indices(
+        gl::STATIC_DRAW,
+        &vertices[..],
+        &indices[..]
+    ); 
 
     print_errors(104);
 
@@ -157,10 +104,6 @@ fn main() {
         gl::Clear(gl::COLOR_BUFFER_BIT);
 
  
-        // gl::BindVertexArray(VAO);
-        // gl::DrawArrays(gl::TRIANGLES, 0, 3);
-        // gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, 0 as *const c_void);
-
         geom.draw();
 
         print_errors(147);
