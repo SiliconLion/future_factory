@@ -61,7 +61,7 @@ fn main() {
     // print_errors(57);
 
 
-    let vertices = [
+    let vertices = vec![
         ThreePoint{ data: [-0.5, -0.5, 0.0,] },
         ThreePoint{ data: [ 0.5, -0.5, 0.0,] },
         ThreePoint{ data: [ 0.0,  0.5, 0.0,] },
@@ -70,22 +70,11 @@ fn main() {
 
     println!("size of verticeis: {}", std::mem::size_of_val(&vertices));
 
-    let dump = std::mem::transmute::<[ThreePoint; 3], [u8; 36]>(vertices);
-    let mut dump = dump.iter();
-    for _ in 0..3 {
-        for _ in 0..3 {
-            for _ in 0..4 {
-            print!("{:02x?}", dump.next().unwrap());
-            }
-            print!("\n");
-        }
-        print!("\n");
-    }
-        
 
 
-    let indices: [u32; 3] = [
-        0, 1, 3,   // first triangle
+
+    let indices = vec![
+        0, 1, 2,   // first triangle
     ];
 
     // let geom : Geometry<ThreePoint> = Geometry::from_verts_and_indices(
@@ -104,10 +93,10 @@ fn main() {
 
     // print_errors(77);
         
-    // let mut EBO: u32 = 0;
-    // gl::GenBuffers(1, &mut EBO);
-    // gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, EBO);
-    // gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, (indices.len() * float_size ) as isize, indices.as_ptr() as _, gl::STATIC_DRAW); 
+    let mut EBO: u32 = 0;
+    gl::GenBuffers(1, &mut EBO);
+    gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, EBO);
+    gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, (indices.len() * float_size ) as isize, indices.as_ptr() as _, gl::STATIC_DRAW); 
 
 
     // print_errors(82);
@@ -163,7 +152,8 @@ fn main() {
 
  
         gl::BindVertexArray(VAO);
-        gl::DrawArrays(gl::TRIANGLES, 0, 3);
+        // gl::DrawArrays(gl::TRIANGLES, 0, 3);
+        gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, 0 as *const c_void);
 
         print_errors(147);
 
