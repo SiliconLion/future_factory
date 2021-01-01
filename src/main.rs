@@ -1,7 +1,8 @@
 extern crate glfw;
 
 use std::ffi::CString;
-
+use std::mem::size_of;
+use std::ffi::c_void;
 
 use glfw::{Action, Context, Key};
 use gl::*;
@@ -44,7 +45,7 @@ fn main() {
 
 
 
-    // let float_size = std::mem::size_of::<f32>();
+    let float_size = std::mem::size_of::<f32>();
 
     unsafe{
     // print_errors(49);
@@ -52,42 +53,50 @@ fn main() {
     // //create/bind the vertex array object.
     // //VAO's store the calls to glVertexAttribPointer and glEnableVertexAttribArray so
     // //you dont have to rebind all the attributes each time 
-    // let mut VAO: u32 = 0;
-
-    // gl::GenVertexArrays(1, &mut VAO);
+    let mut VAO: u32 = 0;
+// 
+    gl::GenVertexArrays(1, &mut VAO);
     // print_errors(56);
-    // gl::BindVertexArray(VAO);
+    gl::BindVertexArray(VAO);
     // print_errors(57);
-    let vertices: [f32; 9] = [
-        -0.5, -0.5, 0.0,
-         0.5, -0.5, 0.0,
-         0.0,  0.5, 0.0 
+
+
+    let vertices = vec![
+        ThreePoint{ data: [-0.5, -0.5, 0.0,] },
+        ThreePoint{ data: [ 0.5, -0.5, 0.0,] },
+        ThreePoint{ data: [ 0.0,  0.5, 0.0,] },
     ];
 
-    let indices: [u32; 3] = [
-        0, 1, 3,   // first triangle
+
+    println!("size of verticeis: {}", std::mem::size_of_val(&vertices));
+
+
+
+
+    let indices = vec![
+        0, 1, 2,   // first triangle
     ];
 
-    let geom : Geometry<ThreePoint> = Geometry::from_verts_and_indices(
-        gl::STATIC_DRAW,
-        &ThreePoint::from_float_buffer(&vertices[..])[..],
-        &indices[..]
-    );
+    // let geom : Geometry<ThreePoint> = Geometry::from_verts_and_indices(
+    //     gl::STATIC_DRAW,
+    //     &ThreePoint::from_float_buffer(&vertices[..])[..],
+    //     &indices[..]
+    // );
 
     print_errors(70);
     
-    // let mut VBO: u32 = 0;
+    let mut VBO: u32 = 0;
 
-    // gl::GenBuffers(1, &mut VBO);
-    // gl::BindBuffer(gl::ARRAY_BUFFER, VBO);
-    // gl::BufferData(gl::ARRAY_BUFFER, 9 * float_size as isize, vertices.as_ptr() as _, gl::STATIC_DRAW );
+    gl::GenBuffers(1, &mut VBO);
+    gl::BindBuffer(gl::ARRAY_BUFFER, VBO);
+    gl::BufferData(gl::ARRAY_BUFFER, 9 * float_size as isize, vertices.as_ptr() as _, gl::STATIC_DRAW );
 
     // print_errors(77);
         
-    // // let mut EBO: u32 = 0;
-    // // gl::GenBuffers(1, &mut EBO);
-    // // gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, EBO);
-    // // gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, (indices.len() * float_size ) as isize, indices.as_ptr() as _, gl::STATIC_DRAW); 
+    let mut EBO: u32 = 0;
+    gl::GenBuffers(1, &mut EBO);
+    gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, EBO);
+    gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, (indices.len() * float_size ) as isize, indices.as_ptr() as _, gl::STATIC_DRAW); 
 
 
     // print_errors(82);
@@ -111,15 +120,22 @@ fn main() {
     // //tell big global state how the 0th vertex attribute is layed out
     // gl::EnableVertexAttribArray(0); 
 
+    
+    ThreePoint::set_vertex_attributes();
+    ThreePoint::enable_vertex_attributes();
+
+    let geom = Geometry {
+        VAO, VBO, EBO, vertices, indices, usage: gl::STATIC_DRAW
+    };
 
     print_errors(104);
 
     let vertex_source = shader::ShaderSource::from_file(
-            "/Users/davidsullivan/Desktop/Programing/opengl/glloadtest/src/shader_src/vertext.vert",
+            "/home/david/Desktop/programing/open-gl/glloadtest/src/shader_src/vertex.vert",
             gl::VERTEX_SHADER
         );
     let frag_source = shader::ShaderSource::from_file(
-        "/Users/davidsullivan/Desktop/Programing/opengl/glloadtest/src/shader_src/fragment.frag",
+        "/home/david/Desktop/programing/open-gl/glloadtest/src/shader_src/fragment.frag",
         gl::FRAGMENT_SHADER
     );
 
@@ -143,10 +159,13 @@ fn main() {
  
         // gl::BindVertexArray(VAO);
         // gl::DrawArrays(gl::TRIANGLES, 0, 3);
+        // gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, 0 as *const c_void);
+
+        geom.draw();
 
         print_errors(147);
 
-        geom.draw();
+        // geom.draw();
 
         print_errors(151);
 
