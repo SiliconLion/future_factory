@@ -59,11 +59,30 @@ fn main() {
     // print_errors(56);
     gl::BindVertexArray(VAO);
     // print_errors(57);
-    let vertices: [f32; 9] = [
-        -0.5, -0.5, 0.0,
-         0.5, -0.5, 0.0,
-         0.0,  0.5, 0.0 
+
+
+    let vertices = [
+        ThreePoint{ data: [-0.5, -0.5, 0.0,] },
+        ThreePoint{ data: [ 0.5, -0.5, 0.0,] },
+        ThreePoint{ data: [ 0.0,  0.5, 0.0,] },
     ];
+
+
+    println!("size of verticeis: {}", std::mem::size_of_val(&vertices));
+
+    let dump = std::mem::transmute::<[ThreePoint; 3], [u8; 36]>(vertices);
+    let mut dump = dump.iter();
+    for _ in 0..3 {
+        for _ in 0..3 {
+            for _ in 0..4 {
+            print!("{:02x?}", dump.next().unwrap());
+            }
+            print!("\n");
+        }
+        print!("\n");
+    }
+        
+
 
     let indices: [u32; 3] = [
         0, 1, 3,   // first triangle
@@ -108,10 +127,11 @@ fn main() {
     // //>the stride as 0 to let OpenGL determine the stride (this only works when values 
     // //>are tightly packed). 
     // //where the position data beins in the buffer
-    gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, (3 * float_size) as i32, 0 as *const c_void);
+    // gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, (3 * float_size) as i32, 0 as *const c_void);
     // //tell big global state how the 0th vertex attribute is layed out
-    gl::EnableVertexAttribArray(0); 
-
+    // gl::EnableVertexAttribArray(0); 
+    ThreePoint::set_vertex_attributes();
+    ThreePoint::enable_vertex_attributes();
 
     print_errors(104);
 

@@ -68,7 +68,7 @@ unsafe impl Vertex for TwoPoint {
 #[derive(Clone, Copy)]
 #[repr(packed)]
 pub struct ThreePoint {
-    data: [f32; 3]
+    pub data: [f32; 3]
 }
 
 unsafe impl Vertex for ThreePoint {
