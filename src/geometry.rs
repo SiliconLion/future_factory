@@ -121,14 +121,14 @@ impl ThreePoint {
 }
 
 pub struct Geometry<V: Vertex> {
-    VAO: u32,
-    VBO: u32,
-    EBO: u32,
-    vertices: Vec<V>,
-    indices: Vec<u32>,
+    pub VAO: u32,
+    pub VBO: u32,
+    pub EBO: u32,
+    pub vertices: Vec<V>,
+    pub indices: Vec<u32>,
     //what mode the vertex buffer associated with VBO is. 
     //eg, GL_STATIC_DRAW, GL_DYNAMIC_DRAW
-    usage: types::GLenum
+    pub usage: types::GLenum
 }
 
 impl<V: Vertex> Geometry<V> {
@@ -153,6 +153,7 @@ impl<V: Vertex> Geometry<V> {
         gl::BindBuffer(gl::ARRAY_BUFFER, VBO);
         gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, EBO);
         //this will set up the layout of the vertex.
+        V::set_vertex_attributes();
         V::enable_vertex_attributes();
 
         //unbind
