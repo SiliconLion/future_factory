@@ -2,9 +2,11 @@ use gl::*;
 use std::convert::TryInto;
 use std::mem::size_of;
 use std::ffi::c_void;
-
-//the stuct that impliments this trait should also "#[repr(packed)]". 
-pub unsafe trait Vertex: Sized + Clone {
+//this trait is a way of ensuring that the representation of the type
+//implimenting Packed is indeed repr(packed)
+use repr_trait::Packed;
+ 
+pub unsafe trait Vertex: Packed + Sized + Clone {
     unsafe fn set_vertex_attributes();
     unsafe fn enable_vertex_attributes();
     fn stride() -> usize;
@@ -13,6 +15,7 @@ pub unsafe trait Vertex: Sized + Clone {
     unsafe fn from_byte_buffer(buffer: &[u8]) -> Vec<Self> {
         if buffer.len() % Self::stride() != 0 {
             println!("Error! cannot evenly create verticies out of buffer");
+            panic!();
         }
 
         let vertex_count = buffer.len() / Self::stride();
@@ -27,7 +30,7 @@ pub unsafe trait Vertex: Sized + Clone {
 }
 
 
-#[derive(Clone, Copy)]
+#[derive(Packed, Clone, Copy)]
 #[repr(packed)]
 pub struct TwoPoint {
     data: [f32; 2]
@@ -65,7 +68,7 @@ unsafe impl Vertex for TwoPoint {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Packed, Clone, Copy)]
 #[repr(packed)]
 pub struct ThreePoint {
     pub data: [f32; 3]
@@ -117,6 +120,51 @@ impl ThreePoint {
         }
 
         return points;
+    }
+}
+
+#[derive(Packed, Clone, Copy)]
+#[repr(packed)]
+pub struct PointWithNorm {
+    location: [f32; 3],
+    norm: [f32; 3]
+}
+
+unsafe impl Vertex for PointWithNorm {
+    
+    unsafe fn set_vertex_attributes() {
+        gl::VertexAttribPointer(
+            0, 
+            3, 
+            gl::FLOAT, 
+            gl::FALSE, 
+            Self::stride() as i32, 
+            0 as *const c_void
+        );
+        gl::VertexAttribPointer(
+            1, 
+            3, 
+            gl::FLOAT, 
+            gl::FALSE, 
+            Self::stride() as i32, 
+            (3 * size_of::<f32>() )as *const c_void
+        );
+    }
+    unsafe fn enable_vertex_attributes() {
+        gl::EnableVertexAttribArray(0); 
+        gl::EnableVertexAttribArray(1); 
+    }
+
+    fn stride() -> usize {
+        return size_of::<f32>() * 6;
+    }
+    unsafe fn from_bytes(bytes: &[u8]) -> Self {
+        if bytes.len() != Self::stride() {
+            panic!("Error, bytes length is not equal to stride");
+        }
+
+        let bytes: [u8; 24] = bytes.try_into().unwrap();
+        return std::mem::transmute::<[u8; 24], Self>(bytes);
     }
 }
 

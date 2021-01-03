@@ -44,38 +44,31 @@ fn main() {
 
 
 
-
-    let float_size = std::mem::size_of::<f32>();
-
     unsafe{
 
 
 
-    let vertices = vec![
-        ThreePoint{ data: [-0.5, -0.5, 0.0,] },
-        ThreePoint{ data: [ 0.5, -0.5, 0.0,] },
-        ThreePoint{ data: [ 0.0,  0.5, 0.0,] },
-    ];
 
-
-    println!("size of verticeis: {}", std::mem::size_of_val(&vertices));
-
-
-
+    //kinda gross to use mem::transmute here. will switch to a better solution at some point.
+    let data = std::mem::transmute::<[f32; 18], [u8; 72]>([
+        -0.5, -0.5, 0.0, 1.0, 0.0, 0.0,
+         0.5, -0.5, 0.0, 0.0, 1.0, 0.0,
+         0.0,  0.5, 0.0, 0.0, 0.0, 1.0
+    ]);
 
     let indices = vec![
         0, 1, 2,   // first triangle
     ];
 
-
-
     let geom = Geometry::from_verts_and_indices(
         gl::STATIC_DRAW,
-        &vertices[..],
+        &PointWithNorm::from_byte_buffer(&data[..])[..],
         &indices[..]
     ); 
 
     print_errors(104);
+
+
 
     let vertex_source = shader::ShaderSource::from_file(
             "src/shader_src/vertex.vert",
@@ -91,6 +84,8 @@ fn main() {
 
     program.bind();
     print_errors(127);
+
+    
 
     while !window.should_close() {
         glfw.poll_events();
