@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 extern crate glfw;
 
 use std::ffi::CString;
@@ -12,8 +14,6 @@ pub mod shader;
 pub mod geometry; 
 
 use geometry::*;
-
-#[allow(non_snake_case)]
 
 fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
     match event {

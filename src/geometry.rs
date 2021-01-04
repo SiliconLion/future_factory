@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use gl::*;
 use std::convert::TryInto;
 use std::mem::size_of;
