@@ -19,6 +19,11 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
     match event {
         glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
             window.set_should_close(true)
+        },
+        glfw::WindowEvent::FramebufferSize(width, height)  => {
+            unsafe {
+                gl::Viewport(0,0, width, height);
+            }
         }
         _ => {}
     }
@@ -35,6 +40,7 @@ fn main() {
         .expect("Failed to create GLFW window.");
 
     window.set_key_polling(true);
+    window.set_framebuffer_size_polling(true);
     window.make_current();
 
     // the supplied function must be of the type:
