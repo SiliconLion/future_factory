@@ -11,8 +11,8 @@ use std::fs::read_to_string;
 
 
 pub struct ShaderSource {
-    source: CString,
-    shader_type: gl::types::GLenum
+    pub source: CString,
+    pub shader_type: gl::types::GLenum
 }
 
 impl ShaderSource {
@@ -31,7 +31,7 @@ impl ShaderSource {
 }
 
 pub struct Shader {
-    id: u32
+    pub id: u32
 }
 
 impl Shader {

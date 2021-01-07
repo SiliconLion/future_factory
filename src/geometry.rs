@@ -35,7 +35,7 @@ pub unsafe trait Vertex: Packed + Sized + Clone {
 #[derive(Packed, Clone, Copy)]
 #[repr(packed)]
 pub struct TwoPoint {
-    data: [f32; 2]
+    pub data: [f32; 2]
 }
 
 unsafe impl Vertex for TwoPoint {
@@ -128,8 +128,8 @@ impl ThreePoint {
 #[derive(Packed, Clone, Copy)]
 #[repr(packed)]
 pub struct PointWithNorm {
-    location: [f32; 3],
-    norm: [f32; 3]
+    pub location: [f32; 3],
+    pub norm: [f32; 3]
 }
 
 unsafe impl Vertex for PointWithNorm {
@@ -281,10 +281,11 @@ impl<V: Vertex> Geometry<V> {
     }
 
     //simple drawing. not going to be the only way to draw
-    pub unsafe fn draw(&self) {
+    //mode tells it what mode to draw in. Eg, triangles, triangle strip...
+    pub unsafe fn draw(&self, mode: gl::types::GLenum) {
         self.bind();
         gl::DrawElements(
-            gl::TRIANGLES, 
+            mode, 
             self.indices.len() as i32, 
             gl::UNSIGNED_INT, 
             0 as *const c_void

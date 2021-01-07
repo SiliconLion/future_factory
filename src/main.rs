@@ -9,11 +9,17 @@ use std::ffi::c_void;
 use glfw::{Action, Context, Key};
 use gl::*;
 
+use rand::prelude::*;
+
+use cgmath::prelude::*;
+use cgmath::Matrix4;
 
 pub mod shader; 
 pub mod geometry; 
+pub mod utilities;
 
 use geometry::*;
+use utilities::*;
 
 fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
     match event {
@@ -51,24 +57,49 @@ fn main() {
 
 
     unsafe{
+    
+    let mut rng = rand::thread_rng();
 
+    let width_count: usize = 10;
+    let height_count: usize = 10;
+    let mut vertices = Vec::with_capacity( (width_count * height_count) as usize );
+    for i in 0..width_count +1{
+        for j in 0..height_count +1{
+            vertices.push(
+                PointWithNorm {
+                    //x and y range from -1 to 1. 
+                    //x starts at -1 and increases, and y starts at 1 and decreases
+                    location : [ 
+                        (2.0 / width_count as f32 ) * i as f32 - 1.0,
+                         1.0 - ((2.0 / height_count as f32 ) * j as f32) , 
+                         0.0
+                    ],
+                    norm: [rng.gen(), rng.gen(), rng.gen()]
+                }
+            );
+        }
+    }
 
+    let mut indices = Vec::with_capacity( (width_count * height_count) as usize );
+    for row in 0..height_count {
+        for col in 0..width_count {
+            //first triangle in rect
+            indices.push(coords_to_index(row,     col,      width_count +1));
+            indices.push(coords_to_index(row + 1, col,      width_count+1));
+            indices.push(coords_to_index(row,     col + 1 , width_count+1));
 
+            //second tri in rect
+            indices.push(coords_to_index(row,     col + 1,  width_count+1));
+            indices.push(coords_to_index(row + 1, col,      width_count+1));
+            indices.push(coords_to_index(row + 1, col + 1 , width_count+1));
+        }
+    }
+    let indices: Vec<u32> = indices.iter().map( |&e| e as u32).collect();
 
-    //kinda gross to use mem::transmute here. will switch to a better solution at some point.
-    let data = std::mem::transmute::<[f32; 18], [u8; 72]>([
-        -0.5, -0.5, 0.0, 1.0, 0.0, 0.0,
-         0.5, -0.5, 0.0, 0.0, 1.0, 0.0,
-         0.0,  0.5, 0.0, 0.0, 0.0, 1.0
-    ]);
-
-    let indices = vec![
-        0, 1, 2,   // first triangle
-    ];
 
     let geom = Geometry::from_verts_and_indices(
         gl::STATIC_DRAW,
-        &PointWithNorm::from_byte_buffer(&data[..])[..],
+        &vertices[..],
         &indices[..]
     ); 
 
@@ -92,6 +123,8 @@ fn main() {
     print_errors(127);
 
     
+    let scale_loc = gl::GetUniformLocation(program.id, CString::new("scale").unwrap().as_ptr() );
+    let mut counter = 1.0;
 
     while !window.should_close() {
         glfw.poll_events();
@@ -104,17 +137,23 @@ fn main() {
         //clears the color buffer (as opposed to depth buffer or stencil buffer etc)
         gl::Clear(gl::COLOR_BUFFER_BIT);
 
- 
-        geom.draw();
+        let scale = Matrix4::from_scale(counter);
+        gl::UniformMatrix4fv(scale_loc, 1, gl::FALSE, scale.as_ptr());
 
-        print_errors(147);
+        print_errors(143);
+        gl::PolygonMode( gl::FRONT_AND_BACK, gl::LINE );
+        gl::LineWidth(1.0);
+        print_errors(146);
+        geom.draw(gl::TRIANGLES);
 
-        // geom.draw();
+        print_errors(149);
 
-        print_errors(151);
+
 
         // check and call events and swap the buffers
         window.swap_buffers();
+
+        counter -= 0.001;
     }
 
     }
