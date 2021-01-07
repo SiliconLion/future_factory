@@ -60,8 +60,8 @@ fn main() {
     
     let mut rng = rand::thread_rng();
 
-    let width_count: usize = 10;
-    let height_count: usize = 10;
+    let width_count: usize = 100;
+    let height_count: usize = 100;
     let mut vertices = Vec::with_capacity( (width_count * height_count) as usize );
     for i in 0..width_count +1{
         for j in 0..height_count +1{
@@ -97,7 +97,7 @@ fn main() {
     let indices: Vec<u32> = indices.iter().map( |&e| e as u32).collect();
 
 
-    let geom = Geometry::from_verts_and_indices(
+    let background = Geometry::from_verts_and_indices(
         gl::STATIC_DRAW,
         &vertices[..],
         &indices[..]
@@ -116,15 +116,39 @@ fn main() {
         gl::FRAGMENT_SHADER
     );
 
-    let program = shader::Shader::new( &vec![vertex_source, frag_source]);
+    let background_program = shader::Shader::new( &vec![vertex_source, frag_source]);
     print_errors(124);
 
-    program.bind();
+
     print_errors(127);
 
+    let rect_verts = [
+        ThreePoint {data:[-0.25, 0.25, 0.0]},
+        ThreePoint {data:[-0.25, -0.25, 0.0]},
+        ThreePoint {data:[0.25, 0.25, 0.0]},
+        ThreePoint {data:[0.25, -0.25, 0.0]}
+    ];
+    //triangle strip indexing
+    let rect_indices = [0,1,2,3];
+
+    let rect = Geometry::from_verts_and_indices(
+        gl::STATIC_DRAW,
+        &rect_verts[..],
+        &rect_indices[..]
+    );
+
+    let rect_vert_shader = shader::ShaderSource::from_file(
+        "src/shader_src/simple.vert",
+        gl::VERTEX_SHADER
+    );
+
+    let rect_frag_shader = shader::ShaderSource::from_file(
+        "src/shader_src/simple.frag",
+        gl::FRAGMENT_SHADER
+    );
+
+    let rect_program = shader::Shader::new( &vec![rect_vert_shader, rect_frag_shader]);
     
-    let scale_loc = gl::GetUniformLocation(program.id, CString::new("scale").unwrap().as_ptr() );
-    let mut counter = 1.0;
 
     while !window.should_close() {
         glfw.poll_events();
@@ -132,28 +156,36 @@ fn main() {
             handle_window_event(&mut window, event);
         }
 
-        //sets clear color
         gl::ClearColor(0.2, 0.3, 0.3, 1.0);
-        //clears the color buffer (as opposed to depth buffer or stencil buffer etc)
-        gl::Clear(gl::COLOR_BUFFER_BIT);
+        gl::Clear(gl::COLOR_BUFFER_BIT|gl::STENCIL_BUFFER_BIT);
 
-        let scale = Matrix4::from_scale(counter);
-        gl::UniformMatrix4fv(scale_loc, 1, gl::FALSE, scale.as_ptr());
+        gl::Enable(gl::STENCIL_TEST); 
+        gl::StencilOp(gl::KEEP, gl::REPLACE, gl::REPLACE);  
+        gl::StencilMask(0xFF);
+        
 
-        print_errors(143);
-        gl::PolygonMode( gl::FRONT_AND_BACK, gl::LINE );
-        gl::LineWidth(1.0);
-        print_errors(146);
-        geom.draw(gl::TRIANGLES);
+
+        // gl::ClearColor()
+
+
+
+        background_program.bind();
+        background.draw(gl::TRIANGLES);
+        background_program.unbind();
 
         print_errors(149);
 
+
+        rect_program.bind();
+        rect.draw(gl::TRIANGLE_STRIP);
+        rect_program.unbind();
+        
 
 
         // check and call events and swap the buffers
         window.swap_buffers();
 
-        counter -= 0.001;
+        // counter -= 0.001;
     }
 
     }
