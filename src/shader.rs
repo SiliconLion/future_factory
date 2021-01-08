@@ -83,7 +83,11 @@ impl Shader {
     pub unsafe fn bind(&self) {
         gl::UseProgram(self.id);
     }
-    pub unsafe fn unbind() {
+    //same thing as bind_zero but can be semantically clearer whats going on.
+    pub unsafe fn unbind(&self) {
+        gl::UseProgram(0);
+    }
+    pub unsafe fn bind_zero() {
         gl::UseProgram(0);
     }
 }

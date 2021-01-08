@@ -12,7 +12,7 @@ use gl::*;
 use rand::prelude::*;
 
 use cgmath::prelude::*;
-use cgmath::Matrix4;
+use cgmath::{Matrix4, Rad};
 
 pub mod shader; 
 pub mod geometry; 
@@ -60,8 +60,8 @@ fn main() {
     
     let mut rng = rand::thread_rng();
 
-    let width_count: usize = 10;
-    let height_count: usize = 10;
+    let width_count: usize = 400;
+    let height_count: usize = 400;
     let mut vertices = Vec::with_capacity( (width_count * height_count) as usize );
     for i in 0..width_count +1{
         for j in 0..height_count +1{
@@ -97,7 +97,7 @@ fn main() {
     let indices: Vec<u32> = indices.iter().map( |&e| e as u32).collect();
 
 
-    let geom = Geometry::from_verts_and_indices(
+    let background = Geometry::from_verts_and_indices(
         gl::STATIC_DRAW,
         &vertices[..],
         &indices[..]
@@ -116,50 +116,124 @@ fn main() {
         gl::FRAGMENT_SHADER
     );
 
-    let program = shader::Shader::new( &vec![vertex_source, frag_source]);
-    print_errors(124);
+    let background_program = shader::Shader::new( &vec![vertex_source, frag_source]);
+    let transformation_loc = gl::GetUniformLocation(
+        background_program.id, 
+        CString::new("transformation").unwrap().as_ptr()
+    );
 
-    program.bind();
+
     print_errors(127);
 
+    let rect_verts = [
+        ThreePoint {data:[-0.25, 0.25, 0.0]},
+        ThreePoint {data:[-0.25, -0.25, 0.0]},
+        ThreePoint {data:[0.25, 0.25, 0.0]},
+        ThreePoint {data:[0.25, -0.25, 0.0]}
+    ];
+    //triangle strip indexing
+    let rect_indices = [0,1,2,3];
+
+    let rect = Geometry::from_verts_and_indices(
+        gl::STATIC_DRAW,
+        &rect_verts[..],
+        &rect_indices[..]
+    );
+
+    let rect_vert_shader = shader::ShaderSource::from_file(
+        "src/shader_src/simple.vert",
+        gl::VERTEX_SHADER
+    );
+
+    let rect_frag_shader = shader::ShaderSource::from_file(
+        "src/shader_src/simple.frag",
+        gl::FRAGMENT_SHADER
+    );
+
+    let rect_program = shader::Shader::new( &vec![rect_vert_shader, rect_frag_shader]);
+    let translation_loc = gl::GetUniformLocation(rect_program.id, CString::new("translation").unwrap().as_ptr());
+
     
-    let scale_loc = gl::GetUniformLocation(program.id, CString::new("scale").unwrap().as_ptr() );
-    let mut counter = 1.0;
+    let mut counter: f32 = 0.0;
 
     while !window.should_close() {
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
             handle_window_event(&mut window, event);
         }
+        let mouse_pos = get_normalized_cursor_pos(&window);
 
-        //sets clear color
+
+
         gl::ClearColor(0.2, 0.3, 0.3, 1.0);
-        //clears the color buffer (as opposed to depth buffer or stencil buffer etc)
-        gl::Clear(gl::COLOR_BUFFER_BIT);
+        gl::StencilMask(0xFF); //enable writing to the mask (including gl::Clear)
+        gl::Clear(gl::COLOR_BUFFER_BIT|gl::STENCIL_BUFFER_BIT);
+        gl::StencilMask(0x00); //disable writing to the mask just as cleanup
 
-        let scale = Matrix4::from_scale(counter);
-        gl::UniformMatrix4fv(scale_loc, 1, gl::FALSE, scale.as_ptr());
 
-        print_errors(143);
-        gl::PolygonMode( gl::FRONT_AND_BACK, gl::LINE );
-        gl::LineWidth(1.0);
-        print_errors(146);
-        geom.draw(gl::TRIANGLES);
+        gl::Enable(gl::STENCIL_TEST); //enable stencil test 
 
-        print_errors(149);
+//Draw to the mask our stencil
+
+        
+        gl::StencilOp(gl::KEEP, gl::REPLACE, gl::REPLACE); //write to the mask, ignoring depth
+        gl::StencilFunc(gl::ALWAYS, 1, 0xFF); //anything that passes, write 1 (i think)
+        gl::StencilMask(0xFF); //this (weirdly) allows the mask to be written to
+        
+        gl::ColorMask(gl::FALSE,gl::FALSE,gl::FALSE,gl::FALSE); //dont write to color
+        gl::DepthMask(gl::FALSE); //dont write to depth
+
+        rect_program.bind();
+        gl::Uniform2f(translation_loc, mouse_pos.0, mouse_pos.1);
+        rect.draw(gl::TRIANGLE_STRIP);
+        rect_program.unbind();
+        
+        gl::StencilMask(0x00); //disable writing to the mask
+        gl::ColorMask(gl::TRUE,gl::TRUE,gl::TRUE,gl::TRUE); //re-enable writing to color
+        gl::DepthMask(gl::TRUE); //re-enable writing to depth
+
+//Draw what the stencil is applied to  (the background)
+
+        let transformation = Matrix4::from_scale(4.0) * Matrix4::from_angle_z(Rad(counter));
+
+        //If the mask value at that fragment is gl::Equal to 1 after its && with 0xFF,
+        //draw the fragment
+        gl::StencilFunc(gl::EQUAL, 1, 0xFF); 
+        background_program.bind();
+        gl::UniformMatrix4fv(transformation_loc, 1, gl::FALSE, transformation.as_ptr());
+        background.draw(gl::TRIANGLES);
+        background_program.unbind();
+
+
+
+
+        print_errors(205);
+
+
 
 
 
         // check and call events and swap the buffers
         window.swap_buffers();
 
-        counter -= 0.001;
+        counter += 0.01;
     }
 
     }
 
 }
 
+fn get_normalized_cursor_pos(window: &glfw::Window) -> (f32, f32) {
+    let (sx, sy) = window.get_size();
+    let screen_dims = (sx as f32, sy as f32);
+    let (mx, my) = window.get_cursor_pos();
+    let mouse_pos = (mx as f32, my as f32);
+
+    return (
+        (mouse_pos.0 / screen_dims.0) * 2.0 - 1.0,
+        1.0 - (mouse_pos.1 / screen_dims.1) * 2.0 
+    );
+}
 
 
 unsafe fn print_errors(line: u32) {
