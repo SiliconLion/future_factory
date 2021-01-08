@@ -12,7 +12,7 @@ use gl::*;
 use rand::prelude::*;
 
 use cgmath::prelude::*;
-use cgmath::Matrix4;
+use cgmath::{Matrix4, Rad};
 
 pub mod shader; 
 pub mod geometry; 
@@ -60,8 +60,8 @@ fn main() {
     
     let mut rng = rand::thread_rng();
 
-    let width_count: usize = 100;
-    let height_count: usize = 100;
+    let width_count: usize = 400;
+    let height_count: usize = 400;
     let mut vertices = Vec::with_capacity( (width_count * height_count) as usize );
     for i in 0..width_count +1{
         for j in 0..height_count +1{
@@ -117,7 +117,10 @@ fn main() {
     );
 
     let background_program = shader::Shader::new( &vec![vertex_source, frag_source]);
-    print_errors(124);
+    let transformation_loc = gl::GetUniformLocation(
+        background_program.id, 
+        CString::new("transformation").unwrap().as_ptr()
+    );
 
 
     print_errors(127);
@@ -148,13 +151,19 @@ fn main() {
     );
 
     let rect_program = shader::Shader::new( &vec![rect_vert_shader, rect_frag_shader]);
+    let translation_loc = gl::GetUniformLocation(rect_program.id, CString::new("translation").unwrap().as_ptr());
+
     
+    let mut counter: f32 = 0.0;
 
     while !window.should_close() {
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
             handle_window_event(&mut window, event);
         }
+        let mouse_pos = get_normalized_cursor_pos(&window);
+
+
 
         gl::ClearColor(0.2, 0.3, 0.3, 1.0);
         gl::StencilMask(0xFF); //enable writing to the mask (including gl::Clear)
@@ -175,6 +184,7 @@ fn main() {
         gl::DepthMask(gl::FALSE); //dont write to depth
 
         rect_program.bind();
+        gl::Uniform2f(translation_loc, mouse_pos.0, mouse_pos.1);
         rect.draw(gl::TRIANGLE_STRIP);
         rect_program.unbind();
         
@@ -183,18 +193,21 @@ fn main() {
         gl::DepthMask(gl::TRUE); //re-enable writing to depth
 
 //Draw what the stencil is applied to  (the background)
+
+        let transformation = Matrix4::from_scale(4.0) * Matrix4::from_angle_z(Rad(counter));
+
         //If the mask value at that fragment is gl::Equal to 1 after its && with 0xFF,
         //draw the fragment
         gl::StencilFunc(gl::EQUAL, 1, 0xFF); 
-
         background_program.bind();
+        gl::UniformMatrix4fv(transformation_loc, 1, gl::FALSE, transformation.as_ptr());
         background.draw(gl::TRIANGLES);
         background_program.unbind();
 
 
 
 
-        print_errors(149);
+        print_errors(205);
 
 
 
@@ -203,13 +216,24 @@ fn main() {
         // check and call events and swap the buffers
         window.swap_buffers();
 
-        // counter -= 0.001;
+        counter += 0.01;
     }
 
     }
 
 }
 
+fn get_normalized_cursor_pos(window: &glfw::Window) -> (f32, f32) {
+    let (sx, sy) = window.get_size();
+    let screen_dims = (sx as f32, sy as f32);
+    let (mx, my) = window.get_cursor_pos();
+    let mouse_pos = (mx as f32, my as f32);
+
+    return (
+        (mouse_pos.0 / screen_dims.0) * 2.0 - 1.0,
+        1.0 - (mouse_pos.1 / screen_dims.1) * 2.0 
+    );
+}
 
 
 unsafe fn print_errors(line: u32) {
