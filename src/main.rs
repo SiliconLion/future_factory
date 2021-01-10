@@ -17,6 +17,7 @@ use cgmath::{Matrix4, Rad};
 pub mod shader; 
 pub mod geometry; 
 pub mod utilities;
+pub mod texture; 
 
 use geometry::*;
 use utilities::*;
