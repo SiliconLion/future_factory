@@ -14,18 +14,19 @@ use rand::prelude::*;
 use cgmath::prelude::*;
 use cgmath::{Matrix4, Rad};
 
-pub mod shader; 
-pub mod geometry; 
-pub mod utilities;
-pub mod texture; 
-pub mod primitives;
-pub mod pipeline;
+pub mod game;
+use game::*;
+
+pub mod rendering;
+use rendering::*;
 
 use geometry::*;
-use utilities::*;
 use texture::Texture;
 use primitives::*;
 use pipeline::*;
+
+pub mod utilities;
+use utilities::*;
 
 fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
     match event {
@@ -159,7 +160,7 @@ fn main() {
     let rect_program = shader::Shader::new( &vec![rect_vert_shader, rect_frag_shader]);
     let translation_loc = gl::GetUniformLocation(rect_program.id, CString::new("translation").unwrap().as_ptr());
 
-    let gold_texture = Texture::new("src/textures/factory_1.png");
+    let gold_texture = Texture::new_from_file("src/textures/factory_1.png");
     let tex_rect = TexturedRect::new(gold_texture, 0.6, 0.7, 0.3, 0.2, 0.0);
     let tex_rect_vert_shader = shader::ShaderSource::from_file(
         "src/shader_src/texture.vert",

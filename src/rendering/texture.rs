@@ -1,4 +1,4 @@
-use image::{open, imageops::flip_vertical_in};
+use image::{open, imageops::flip_vertical_in, RgbaImage, Rgba};
 use gl::*;
 use std::ffi::c_void;
 
@@ -12,8 +12,8 @@ pub struct Texture {
 impl Texture {
     //by default, texture is created with wraping set to clamp to border, and 
     //filtering set to linear.
-    pub unsafe fn new<S: Into<String>>(path: S) -> Texture {
-        let image = open(path.into()).unwrap().into_rgba8();
+    pub unsafe fn new(image: image::ImageBuffer<image::Rgba<u8>, std::vec::Vec<u8>>) -> Texture {
+        
         let mut flipped_image = image.clone(); //kinda nasty but had to move fast and it worked
         flip_vertical_in(&image, &mut flipped_image);
         
@@ -38,6 +38,11 @@ impl Texture {
         gl::GenerateMipmap(gl::TEXTURE_2D);
 
         return texture;
+    }
+
+    pub unsafe fn new_from_file<S: Into<String>>(path: S) -> Texture {
+        let image = open(path.into()).unwrap().into_rgba8();
+        return Texture::new(image);
     }
 
     //slot is which texture slot to bind to. 
@@ -69,6 +74,17 @@ impl Texture {
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, max_filter as gl::types::GLint);
         Texture::unbind(0);
     } 
+
+    pub unsafe fn new_blank() -> Texture {
+        let mut img = RgbaImage::new(32, 32);
+        for x in 0..32 {
+            for y in 0..32 {
+                img.put_pixel(x, y, Rgba([0,0,0,0]));
+            }
+        }
+
+        return Texture::new(img);
+    }
 }
 
 impl Drop for Texture {
