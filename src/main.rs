@@ -168,8 +168,7 @@ fn main() {
         gl::FRAGMENT_SHADER
     );
     let tex_rect_program = shader::Shader::new( &vec![tex_rect_vert_shader, tex_rect_frag_shader]);
-    tex_rect_program.bind();
-    print_errors(171);
+
     
     let mut counter: f32 = 0.0;
     while !window.should_close() {
@@ -222,20 +221,14 @@ fn main() {
         gl::Disable(gl::STENCIL_TEST);
 
 //draw the textured rect
-// gl::PolygonMode( gl::FRONT_AND_BACK, gl::LINE );
-        print_errors(224);
         tex_rect_program.bind();
-        print_errors(226);
         let sampler_loc = gl::GetUniformLocation(tex_rect_program.id, CString::new("ourTexture").unwrap().as_ptr());
-        print_errors(228);
         tex_rect.draw(sampler_loc);
-        print_errors(230);
         tex_rect_program.unbind();
 
+
+
         print_errors(233);
-
-
-
 
 
         // check and call events and swap the buffers
