@@ -157,7 +157,7 @@ fn main() {
     let rect_program = shader::Shader::new( &vec![rect_vert_shader, rect_frag_shader]);
     let translation_loc = gl::GetUniformLocation(rect_program.id, CString::new("translation").unwrap().as_ptr());
 
-    let gold_texture = Texture::new("src/soft_gold.jpg");
+    let gold_texture = Texture::new("src/textures/soft_gold.jpg");
     let tex_rect = TexturedRect::new(gold_texture, 0.3, 0.2, 0.3, 0.2, 0.0);
     let tex_rect_vert_shader = shader::ShaderSource::from_file(
         "src/shader_src/texture.vert",
@@ -168,10 +168,10 @@ fn main() {
         gl::FRAGMENT_SHADER
     );
     let tex_rect_program = shader::Shader::new( &vec![tex_rect_vert_shader, tex_rect_frag_shader]);
-
-
+    tex_rect_program.bind();
+    print_errors(171);
+    
     let mut counter: f32 = 0.0;
-
     while !window.should_close() {
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
@@ -219,16 +219,19 @@ fn main() {
         gl::UniformMatrix4fv(transformation_loc, 1, gl::FALSE, transformation.as_ptr());
         background.draw(gl::TRIANGLES);
         background_program.unbind();
-
         gl::Disable(gl::STENCIL_TEST);
 
+//draw the textured rect
+        print_errors(224);
         tex_rect_program.bind();
+        print_errors(226);
         let sampler_loc = gl::GetUniformLocation(tex_rect_program.id, CString::new("ourTexture").unwrap().as_ptr());
+        print_errors(228);
         tex_rect.draw(sampler_loc);
+        print_errors(230);
         tex_rect_program.unbind();
 
-
-        print_errors(205);
+        print_errors(233);
 
 
 

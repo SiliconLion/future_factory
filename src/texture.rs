@@ -35,8 +35,7 @@ impl Texture {
 
         gl::GenerateMipmap(gl::TEXTURE_2D);
 
-
-        unimplemented!();
+        return texture;
     }
 
     //slot is which texture slot to bind to. 
