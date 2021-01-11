@@ -194,7 +194,7 @@ unsafe impl Vertex for TexPoint {
             gl::FLOAT, 
             gl::FALSE, 
             Self::stride() as i32, 
-            (2 * size_of::<f32>() )as *const c_void
+            (3 * size_of::<f32>() )as *const c_void
         );
     }
     unsafe fn enable_vertex_attributes() {

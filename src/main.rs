@@ -157,8 +157,8 @@ fn main() {
     let rect_program = shader::Shader::new( &vec![rect_vert_shader, rect_frag_shader]);
     let translation_loc = gl::GetUniformLocation(rect_program.id, CString::new("translation").unwrap().as_ptr());
 
-    let gold_texture = Texture::new("src/textures/soft_gold.jpg");
-    let tex_rect = TexturedRect::new(gold_texture, 0.3, 0.2, 0.3, 0.2, 0.0);
+    let gold_texture = Texture::new("src/textures/wrinkled-gold.jpg");
+    let tex_rect = TexturedRect::new(gold_texture, 0.6, 0.7, 0.3, 0.2, 0.0);
     let tex_rect_vert_shader = shader::ShaderSource::from_file(
         "src/shader_src/texture.vert",
         gl::VERTEX_SHADER
@@ -222,6 +222,7 @@ fn main() {
         gl::Disable(gl::STENCIL_TEST);
 
 //draw the textured rect
+// gl::PolygonMode( gl::FRONT_AND_BACK, gl::LINE );
         print_errors(224);
         tex_rect_program.bind();
         print_errors(226);

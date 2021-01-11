@@ -30,7 +30,7 @@ impl Texture {
             0,
             gl::RGBA,
             gl::UNSIGNED_BYTE,
-            image.as_ptr() as *const c_void //the .as_ptr cast is suspect.
+            image.into_raw().as_ptr() as *const c_void //the .as_ptr cast is suspect.
         ); 
 
         gl::GenerateMipmap(gl::TEXTURE_2D);
