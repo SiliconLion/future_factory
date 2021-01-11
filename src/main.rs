@@ -25,6 +25,7 @@ use geometry::*;
 use utilities::*;
 use texture::Texture;
 use primitives::*;
+use pipeline::*;
 
 fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
     match event {
@@ -182,44 +183,31 @@ fn main() {
 
 
         gl::ClearColor(0.2, 0.3, 0.3, 1.0);
-        gl::StencilMask(0xFF); //enable writing to the mask (including gl::Clear)
-        gl::Clear(gl::COLOR_BUFFER_BIT|gl::STENCIL_BUFFER_BIT);
-        gl::StencilMask(0x00); //disable writing to the mask just as cleanup
-
-
-        gl::Enable(gl::STENCIL_TEST); //enable stencil test 
-
-//Draw to the mask our stencil
-
+        gl::Clear(gl::COLOR_BUFFER_BIT);
         
-        gl::StencilOp(gl::KEEP, gl::REPLACE, gl::REPLACE); //write to the mask, ignoring depth
-        gl::StencilFunc(gl::ALWAYS, 1, 0xFF); //anything that passes, write 1 (i think)
-        gl::StencilMask(0xFF); //this (weirdly) allows the mask to be written to
-        
-        gl::ColorMask(gl::FALSE,gl::FALSE,gl::FALSE,gl::FALSE); //dont write to color
-        gl::DepthMask(gl::FALSE); //dont write to depth
+        clear_stencil();
+
+        start_stencil_writing();
 
         rect_program.bind();
         gl::Uniform2f(translation_loc, mouse_pos.0, mouse_pos.1);
         rect.draw(gl::TRIANGLE_STRIP);
         rect_program.unbind();
         
-        gl::StencilMask(0x00); //disable writing to the mask
-        gl::ColorMask(gl::TRUE,gl::TRUE,gl::TRUE,gl::TRUE); //re-enable writing to color
-        gl::DepthMask(gl::TRUE); //re-enable writing to depth
+        stop_stencil_writing();
 
 //Draw what the stencil is applied to  (the background)
 
         let transformation = Matrix4::from_scale(4.0) * Matrix4::from_angle_z(Rad(counter));
 
-        //If the mask value at that fragment is gl::Equal to 1 after its && with 0xFF,
-        //draw the fragment
-        gl::StencilFunc(gl::EQUAL, 1, 0xFF); 
+        draw_where_stencil();
+
         background_program.bind();
         gl::UniformMatrix4fv(transformation_loc, 1, gl::FALSE, transformation.as_ptr());
         background.draw(gl::TRIANGLES);
         background_program.unbind();
-        gl::Disable(gl::STENCIL_TEST);
+        
+        disable_stencil();
 
 //draw the textured rect
         tex_rect_program.bind();

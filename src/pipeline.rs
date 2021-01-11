@@ -28,3 +28,7 @@ pub unsafe fn draw_where_stencil() {
     //draw the fragment
     gl::StencilFunc(gl::EQUAL, 1, 0xFF); 
 }
+
+pub unsafe fn disable_stencil() {
+    gl::Disable(gl::STENCIL_TEST);
+}
