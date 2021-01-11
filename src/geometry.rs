@@ -170,6 +170,54 @@ unsafe impl Vertex for PointWithNorm {
     }
 }
 
+
+#[derive(Clone, Copy, Packed)]
+#[repr(packed)]
+pub struct TexPoint {
+    pub location: [f32; 3],
+    pub tex_coord: [f32; 2]
+}
+
+unsafe impl Vertex for TexPoint {
+    unsafe fn set_vertex_attributes() {
+        gl::VertexAttribPointer(
+            0, 
+            3, 
+            gl::FLOAT, 
+            gl::FALSE, 
+            Self::stride() as i32, 
+            0 as *const c_void
+        );
+        gl::VertexAttribPointer(
+            1, 
+            2, 
+            gl::FLOAT, 
+            gl::FALSE, 
+            Self::stride() as i32, 
+            (3 * size_of::<f32>() )as *const c_void
+        );
+    }
+    unsafe fn enable_vertex_attributes() {
+        gl::EnableVertexAttribArray(0); 
+        gl::EnableVertexAttribArray(1); 
+    }
+
+    fn stride() -> usize {
+        return 5 * size_of::<f32>();
+    }
+
+    unsafe fn from_bytes(bytes: &[u8]) -> Self {
+        if bytes.len() != Self::stride() {
+            panic!("Error, bytes length is not equal to stride");
+        }
+
+        let bytes: [u8; 20] = bytes.try_into().unwrap();
+        return std::mem::transmute::<[u8; 20], Self>(bytes);
+    }
+}
+
+
+
 pub struct Geometry<V: Vertex> {
     pub VAO: u32,
     pub VBO: u32,
