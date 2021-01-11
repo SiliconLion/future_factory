@@ -12,7 +12,7 @@ pub struct Texture {
 impl Texture {
     //by default, texture is created with wraping set to clamp to border, and 
     //filtering set to linear.
-    unsafe fn new<S: Into<String>>(path: S, has_alpha: bool) -> Texture {
+    pub unsafe fn new<S: Into<String>>(path: S) -> Texture {
         let image = open(path.into()).unwrap().into_rgba8();
         
         let mut texture = Texture {id: 0, width: image.width(), height: image.height()};
@@ -40,13 +40,13 @@ impl Texture {
     }
 
     //slot is which texture slot to bind to. 
-    unsafe fn bind(&self, slot: u32) {
+    pub unsafe fn bind(&self, slot: u32) {
         //set which slot is active
         gl::ActiveTexture(gl::TEXTURE0 + slot);
         gl::BindTexture(gl::TEXTURE_2D, self.id);
     }
 
-    unsafe fn unbind(slot: u32) {
+    pub unsafe fn unbind(slot: u32) {
         gl::ActiveTexture(gl::TEXTURE0 + slot);
         gl::BindTexture(gl::TEXTURE_2D, 0);
     }
@@ -54,7 +54,7 @@ impl Texture {
     //sets the vertical and horizontal wrapping settings
     //technically doesnt need to be mut, but really its a mutating operation its just not 
     //changing data.
-    unsafe fn set_wrapping(&mut self, s_wrap: gl::types::GLenum, t_wrap: gl::types::GLenum) {
+    pub unsafe fn set_wrapping(&mut self, s_wrap: gl::types::GLenum, t_wrap: gl::types::GLenum) {
         self.bind(0);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, s_wrap as gl::types::GLint);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, t_wrap as gl::types::GLint);
@@ -62,7 +62,7 @@ impl Texture {
     }
 
     //sets the way sampling is interpolated 
-    unsafe fn set_filtering(&mut self, min_filter: gl::types::GLenum, max_filter: gl::types::GLenum) {
+    pub unsafe fn set_filtering(&mut self, min_filter: gl::types::GLenum, max_filter: gl::types::GLenum) {
         self.bind(0);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, min_filter as gl::types::GLint);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, max_filter as gl::types::GLint);

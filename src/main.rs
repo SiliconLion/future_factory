@@ -18,9 +18,12 @@ pub mod shader;
 pub mod geometry; 
 pub mod utilities;
 pub mod texture; 
+pub mod primitives;
 
 use geometry::*;
 use utilities::*;
+use texture::Texture;
+use primitives::*;
 
 fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
     match event {
@@ -154,7 +157,19 @@ fn main() {
     let rect_program = shader::Shader::new( &vec![rect_vert_shader, rect_frag_shader]);
     let translation_loc = gl::GetUniformLocation(rect_program.id, CString::new("translation").unwrap().as_ptr());
 
-    
+    let gold_texture = Texture::new("src/soft_gold.jpg");
+    let tex_rect = TexturedRect::new(gold_texture, 0.3, 0.2, 0.3, 0.2, 0.0);
+    let tex_rect_vert_shader = shader::ShaderSource::from_file(
+        "src/shader_src/texture.vert",
+        gl::VERTEX_SHADER
+    );
+    let tex_rect_frag_shader = shader::ShaderSource::from_file(
+        "src/shader_src/texture.frag",
+        gl::FRAGMENT_SHADER
+    );
+    let tex_rect_program = shader::Shader::new( &vec![tex_rect_vert_shader, tex_rect_frag_shader]);
+
+
     let mut counter: f32 = 0.0;
 
     while !window.should_close() {
@@ -205,7 +220,12 @@ fn main() {
         background.draw(gl::TRIANGLES);
         background_program.unbind();
 
+        gl::Disable(gl::STENCIL_TEST);
 
+        tex_rect_program.bind();
+        let sampler_loc = gl::GetUniformLocation(tex_rect_program.id, CString::new("ourTexture").unwrap().as_ptr());
+        tex_rect.draw(sampler_loc);
+        tex_rect_program.unbind();
 
 
         print_errors(205);
