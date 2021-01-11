@@ -1,4 +1,4 @@
-use image::{open};
+use image::{open, imageops::flip_vertical_in};
 use gl::*;
 use std::ffi::c_void;
 
@@ -14,8 +14,10 @@ impl Texture {
     //filtering set to linear.
     pub unsafe fn new<S: Into<String>>(path: S) -> Texture {
         let image = open(path.into()).unwrap().into_rgba8();
+        let mut flipped_image = image.clone(); //kinda nasty but had to move fast and it worked
+        flip_vertical_in(&image, &mut flipped_image);
         
-        let mut texture = Texture {id: 0, width: image.width(), height: image.height()};
+        let mut texture = Texture {id: 0, width: flipped_image.width(), height: flipped_image.height()};
         texture.set_wrapping(gl::CLAMP_TO_BORDER, gl::CLAMP_TO_BORDER);
         texture.set_filtering(gl::LINEAR, gl::LINEAR);
 
@@ -30,7 +32,7 @@ impl Texture {
             0,
             gl::RGBA,
             gl::UNSIGNED_BYTE,
-            image.into_raw().as_ptr() as *const c_void //the .as_ptr cast is suspect.
+            flipped_image.into_raw().as_ptr() as *const c_void //the .as_ptr cast is suspect.
         ); 
 
         gl::GenerateMipmap(gl::TEXTURE_2D);
