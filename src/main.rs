@@ -15,12 +15,13 @@ use cgmath::prelude::*;
 use cgmath::{Matrix4, Rad};
 
 pub mod game;
-use game::*;
+use game::tiles::*;
 
 pub mod rendering;
 use rendering::*;
 
 use geometry::*;
+use shader::*;
 use texture::Texture;
 use primitives::*;
 use pipeline::*;
@@ -64,116 +65,47 @@ fn main() {
 
 
     unsafe{
-    
-    let mut rng = rand::thread_rng();
 
-    let width_count: usize = 400;
-    let height_count: usize = 400;
-    let mut vertices = Vec::with_capacity( (width_count * height_count) as usize );
-    for i in 0..width_count +1{
-        for j in 0..height_count +1{
-            vertices.push(
-                PointWithNorm {
-                    //x and y range from -1 to 1. 
-                    //x starts at -1 and increases, and y starts at 1 and decreases
-                    location : [ 
-                        (2.0 / width_count as f32 ) * i as f32 - 1.0,
-                         1.0 - ((2.0 / height_count as f32 ) * j as f32) , 
-                         0.0
-                    ],
-                    norm: [rng.gen(), rng.gen(), rng.gen()]
-                }
-            );
+    let mut rows = 10;
+    let mut cols = 10;
+    let mut tiles: Vec<Vec<Tile>> = Vec::with_capacity(rows);
+    let mut counter = 0;
+    for r in 0..rows {
+        tiles.push( Vec::with_capacity(cols));
+        for c in 0..cols {
+            tiles[r].push(Tile::new(r as i32, c as i32));
+            if counter % 2 == 0 {
+                tiles[r][c].set_type(TileType::Factory(Factory::Red));
+            } else {
+                tiles[r][c].set_type(TileType::Factory(Factory::Green));
+            }
+            
         }
     }
 
-    let mut indices = Vec::with_capacity( (width_count * height_count) as usize );
-    for row in 0..height_count {
-        for col in 0..width_count {
-            //first triangle in rect
-            indices.push(coords_to_index(row,     col,      width_count +1));
-            indices.push(coords_to_index(row + 1, col,      width_count+1));
-            indices.push(coords_to_index(row,     col + 1 , width_count+1));
-
-            //second tri in rect
-            indices.push(coords_to_index(row,     col + 1,  width_count+1));
-            indices.push(coords_to_index(row + 1, col,      width_count+1));
-            indices.push(coords_to_index(row + 1, col + 1 , width_count+1));
-        }
-    }
-    let indices: Vec<u32> = indices.iter().map( |&e| e as u32).collect();
-
-
-    let background = Geometry::from_verts_and_indices(
-        gl::STATIC_DRAW,
-        &vertices[..],
-        &indices[..]
-    ); 
-
-    print_errors(104);
-
-
-
-    let vertex_source = shader::ShaderSource::from_file(
-            "src/shader_src/vertex.vert",
+    let textures = TileTextures {
+        red_factory: Texture::new_from_file("src/textures/red_factory.png"),
+        blue_factory: Texture::new_from_file("src/textures/blue_factory.png"),
+        green_factory: Texture::new_blank(),
+        empty_texture: Texture::new_blank()
+    };
+    print_errors(92);
+    let tile_program = Shader::new( &vec![
+        shader::ShaderSource::new(
+            String::from("src/shader_src/tile.vert"), 
             gl::VERTEX_SHADER
-        );
-    let frag_source = shader::ShaderSource::from_file(
-        "src/shader_src/fragment.frag",
-        gl::FRAGMENT_SHADER
-    );
-
-    let background_program = shader::Shader::new( &vec![vertex_source, frag_source]);
-    let transformation_loc = gl::GetUniformLocation(
-        background_program.id, 
-        CString::new("transformation").unwrap().as_ptr()
-    );
+        ),
+        shader::ShaderSource::new(
+            String::from("src/shader_src/tile.frag"), 
+            gl::FRAGMENT_SHADER
+        ),
+    ]);
+    print_errors(103);
 
 
-    print_errors(127);
+    let sampler_loc = gl::GetUniformLocation(tile_program.id, CString::new("ourTexture").unwrap().as_ptr());
 
-    let rect_verts = [
-        ThreePoint {data:[-0.25, 0.25, 0.0]},
-        ThreePoint {data:[-0.25, -0.25, 0.0]},
-        ThreePoint {data:[0.25, 0.25, 0.0]},
-        ThreePoint {data:[0.25, -0.25, 0.0]}
-    ];
-    //triangle strip indexing
-    let rect_indices = [0,1,2,3];
 
-    let rect = Geometry::from_verts_and_indices(
-        gl::STATIC_DRAW,
-        &rect_verts[..],
-        &rect_indices[..]
-    );
-
-    let rect_vert_shader = shader::ShaderSource::from_file(
-        "src/shader_src/simple.vert",
-        gl::VERTEX_SHADER
-    );
-
-    let rect_frag_shader = shader::ShaderSource::from_file(
-        "src/shader_src/simple.frag",
-        gl::FRAGMENT_SHADER
-    );
-
-    let rect_program = shader::Shader::new( &vec![rect_vert_shader, rect_frag_shader]);
-    let translation_loc = gl::GetUniformLocation(rect_program.id, CString::new("translation").unwrap().as_ptr());
-
-    let gold_texture = Texture::new_from_file("src/textures/factory_1.png");
-    let tex_rect = TexturedRect::new(gold_texture, 0.6, 0.7, 0.3, 0.2, 0.0);
-    let tex_rect_vert_shader = shader::ShaderSource::from_file(
-        "src/shader_src/texture.vert",
-        gl::VERTEX_SHADER
-    );
-    let tex_rect_frag_shader = shader::ShaderSource::from_file(
-        "src/shader_src/texture.frag",
-        gl::FRAGMENT_SHADER
-    );
-    let tex_rect_program = shader::Shader::new( &vec![tex_rect_vert_shader, tex_rect_frag_shader]);
-
-    
-    let mut counter: f32 = 0.0;
     while !window.should_close() {
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
@@ -185,37 +117,17 @@ fn main() {
 
         gl::ClearColor(0.2, 0.3, 0.3, 1.0);
         gl::Clear(gl::COLOR_BUFFER_BIT);
-        
         clear_stencil();
 
-        start_stencil_writing();
-
-        rect_program.bind();
-        gl::Uniform2f(translation_loc, mouse_pos.0, mouse_pos.1);
-        rect.draw(gl::TRIANGLE_STRIP);
-        rect_program.unbind();
-        
-        stop_stencil_writing();
-
-//Draw what the stencil is applied to  (the background)
-
-        let transformation = Matrix4::from_scale(4.0) * Matrix4::from_angle_z(Rad(counter));
-
-        draw_where_stencil();
-
-        background_program.bind();
-        gl::UniformMatrix4fv(transformation_loc, 1, gl::FALSE, transformation.as_ptr());
-        background.draw(gl::TRIANGLES);
-        background_program.unbind();
-        
-        disable_stencil();
-
-//draw the textured rect
-        tex_rect_program.bind();
-        let sampler_loc = gl::GetUniformLocation(tex_rect_program.id, CString::new("ourTexture").unwrap().as_ptr());
-        tex_rect.draw(sampler_loc);
-        tex_rect_program.unbind();
-
+        tile_program.bind();
+        gl::Uniform1i(sampler_loc, 0); //tile.draw_skin binds the texture to 0
+        print_errors(122);
+        for r in 0..rows {
+            for c in 0..cols {
+                let tile = &tiles[r][c];
+                tile.draw_skin(&textures);
+            }
+        }
 
 
         print_errors(233);
@@ -224,7 +136,7 @@ fn main() {
         // check and call events and swap the buffers
         window.swap_buffers();
 
-        counter += 0.01;
+
     }
 
     }

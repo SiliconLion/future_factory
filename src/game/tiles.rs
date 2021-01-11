@@ -65,8 +65,8 @@ impl Tile {
                 TileType::Factory(factory_color) => {
                     match factory_color {
                         Factory::Red => &textures.red_factory,
-                        Factory::Blue => &textures.red_factory,
-                        Factory::Green => &textures.red_factory,
+                        Factory::Blue => &textures.blue_factory,
+                        Factory::Green => &textures.empty_texture,
                     }
                 }
                 _ => &textures.empty_texture
@@ -80,9 +80,9 @@ impl Tile {
 }
 
 pub struct TileTextures {
-    red_factory: Texture,
-    blue_factory: Texture,
-    green_factory: Texture,
-    empty_texture: Texture
+    pub red_factory: Texture,
+    pub blue_factory: Texture,
+    pub green_factory: Texture,
+    pub empty_texture: Texture
     //more feilds to come
 }
