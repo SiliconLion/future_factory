@@ -19,6 +19,7 @@ pub mod geometry;
 pub mod utilities;
 pub mod texture; 
 pub mod primitives;
+pub mod pipeline;
 
 use geometry::*;
 use utilities::*;
