@@ -6,6 +6,7 @@ use std::ffi::CString;
 use std::mem::size_of;
 use std::ffi::c_void;
 
+
 use glfw::{Action, Context, Key};
 use gl::*;
 
@@ -29,15 +30,54 @@ use pipeline::*;
 pub mod utilities;
 use utilities::*;
 
-fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
+fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, tiles: &mut Vec<Vec<Tile>>, row: &mut usize, col: &mut usize) {
     match event {
-        glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-            window.set_should_close(true)
+        glfw::WindowEvent::Key(key, _, Action::Press, _) => {
+            match key {
+                Key::Escape => window.set_should_close(true),
+                Key::Right => {*col += 1;},
+                Key::Left => {*col -= 1},
+                Key::Up => {*row -= 1;},
+                Key::Down => {*row += 1;},
+                Key::Space => {
+                    let mut tile = &mut tiles[*row][*col];
+
+                    let mut rng = rand::thread_rng();
+                    let range = rng.gen_range(0..3);
+                    match range {
+                        0 => tile.set_type(TileType::Factory(Factory::Red)),
+                        1 => tile.set_type(TileType::Factory(Factory::Green)),
+                        2 => tile.set_type(TileType::Factory(Factory::Blue)),
+                        _ => {}
+                    }
+                },
+                _ => {}
+            }
+            
         },
         glfw::WindowEvent::FramebufferSize(width, height)  => {
             unsafe {
                 gl::Viewport(0,0, width, height);
             }
+        },
+        glfw::WindowEvent::MouseButton(_, action, _) => {
+            // if action == glfw::Action::Press {
+            //     println!("here!");
+            //     let mouse_pos = get_normalized_cursor_pos(&window);
+            //     let (row, col) = get_tile_coords(mouse_pos.0, mouse_pos.1);
+
+            //     let mut tile = &mut tiles[row][col];
+
+            //     let mut rng = rand::thread_rng();
+            //     let range = rng.gen_range(0..3);
+            //     match range {
+            //         0 => tile.set_type(TileType::Factory(Factory::Red)),
+            //         1 => tile.set_type(TileType::Factory(Factory::Green)),
+            //         2 => tile.set_type(TileType::Factory(Factory::Blue)),
+            //         _ => {}
+            //     }
+            // }
+
         }
         _ => {}
     }
@@ -53,8 +93,9 @@ fn main() {
     let (mut window, events) = glfw.create_window(300, 300, "Hello this is window", glfw::WindowMode::Windowed)
         .expect("Failed to create GLFW window.");
 
-    window.set_key_polling(true);
-    window.set_framebuffer_size_polling(true);
+    // window.set_key_polling(true);
+    // window.set_framebuffer_size_polling(true);
+    window.set_all_polling(true);
     window.make_current();
 
     // the supplied function must be of the type:
@@ -62,28 +103,38 @@ fn main() {
     // `window` is a glfw::Window
     gl::load_with(|s| window.get_proc_address(s) as *const _);
 
-
+    let mut selected_r = 0;
+    let mut selected_c = 0;
 
     unsafe{
 
     let mut rows = 20;
     let mut cols = 20;
     let mut tiles: Vec<Vec<Tile>> = Vec::with_capacity(rows);
-    let mut counter = 0;
+    // let mut counter = 0;
+    // for r in 0..rows {
+    //     tiles.push( Vec::with_capacity(cols));
+    //     for c in 0..cols {
+    //         tiles[r].push(Tile::new(r as i32, c as i32));
+    //         if counter % 4 == 0 {
+    //             tiles[r][c].set_type(TileType::Factory(Factory::Red));
+    //         } else if counter %3 == 0 {
+    //             tiles[r][c].set_type(TileType::Factory(Factory::Blue));
+    //         } else if counter % 2 == 0 {
+    //             tiles[r][c].set_type(TileType::Factory(Factory::Green));
+    //         } else {
+    //             tiles[r][c].set_type(TileType::Empty);
+    //         }
+    //         counter += 1;
+    //     }
+    // }
+
+
     for r in 0..rows {
         tiles.push( Vec::with_capacity(cols));
         for c in 0..cols {
             tiles[r].push(Tile::new(r as i32, c as i32));
-            if counter % 4 == 0 {
-                tiles[r][c].set_type(TileType::Factory(Factory::Red));
-            } else if counter %3 == 0 {
-                tiles[r][c].set_type(TileType::Factory(Factory::Blue));
-            } else if counter % 2 == 0 {
-                tiles[r][c].set_type(TileType::Factory(Factory::Green));
-            } else {
-                tiles[r][c].set_type(TileType::Empty);
-            }
-            counter += 1;
+            tiles[r][c].set_type(TileType::Empty);
         }
     }
 
@@ -127,10 +178,9 @@ fn main() {
     while !window.should_close() {
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
-            handle_window_event(&mut window, event);
+            handle_window_event(&mut window, event, &mut tiles, &mut selected_r, &mut selected_c);
         }
         let mouse_pos = get_normalized_cursor_pos(&window);
-        println!("mouse x: {}, mouse y: {}", mouse_pos.0, mouse_pos.1);
 
 
         gl::ClearColor(0.2, 0.3, 0.3, 1.0);
@@ -177,6 +227,15 @@ fn get_normalized_cursor_pos(window: &glfw::Window) -> (f32, f32) {
         (mouse_pos.0 / screen_dims.0) * 2.0 - 1.0,
         1.0 - (mouse_pos.1 / screen_dims.1) * 2.0 
     );
+}
+
+fn get_tile_coords(screen_x: f32, screen_y: f32) -> (usize, usize){
+    let tile_width = 1.0 / 20.0;
+    let tile_height = 1.0 / 20.0;
+    let row = ( (screen_y + 1.0) / tile_height ).floor() as usize; 
+    let col = ( (screen_x + 1.0) / tile_width ).floor() as usize; 
+
+    return (row, col);
 }
 
 
