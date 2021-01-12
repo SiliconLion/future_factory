@@ -12,7 +12,7 @@ use gl::*;
 use rand::prelude::*;
 
 use cgmath::prelude::*;
-use cgmath::{Matrix4, Rad};
+use cgmath::{Matrix4, Rad, Vector3};
 
 pub mod game;
 use game::tiles::*;
@@ -66,8 +66,8 @@ fn main() {
 
     unsafe{
 
-    let mut rows = 10;
-    let mut cols = 10;
+    let mut rows = 20;
+    let mut cols = 20;
     let mut tiles: Vec<Vec<Tile>> = Vec::with_capacity(rows);
     let mut counter = 0;
     for r in 0..rows {
@@ -86,6 +86,8 @@ fn main() {
             counter += 1;
         }
     }
+
+    println!("x: {}, y: {}", tiles[0][0].geometry.vertices[0].location[0], tiles[0][0].geometry.vertices[0].location[1]);
 
     let mut tile = Tile::new(0, 0);
     tile.set_type(TileType::Factory(Factory::Red));
@@ -111,8 +113,10 @@ fn main() {
 
 
     let sampler_loc = gl::GetUniformLocation(tile_program.id, CString::new("ourTexture").unwrap().as_ptr());
-    let transform_loc = gl::GetUniformLocation(tile_program.id, CString::new("transform").unwrap().as_ptr());
-    let transform = Matrix4::from_scale(0.1);
+    let scale_loc = gl::GetUniformLocation(tile_program.id, CString::new("scale").unwrap().as_ptr());
+    let translation_loc = gl::GetUniformLocation(tile_program.id, CString::new("translation").unwrap().as_ptr());
+    let scale = Matrix4::from_scale(2.0 / rows as f32);
+    
 
 
     // gl::PolygonMode( gl::FRONT_AND_BACK, gl::LINE );
@@ -126,7 +130,7 @@ fn main() {
             handle_window_event(&mut window, event);
         }
         let mouse_pos = get_normalized_cursor_pos(&window);
-
+        println!("mouse x: {}, mouse y: {}", mouse_pos.0, mouse_pos.1);
 
 
         gl::ClearColor(0.2, 0.3, 0.3, 1.0);
@@ -136,8 +140,11 @@ fn main() {
         tile_program.bind();
         print_errors(129);
         gl::Uniform1i(sampler_loc, 0); //tile.draw_skin binds the texture to 0
-        gl::UniformMatrix4fv(transform_loc, 1, gl::FALSE, transform.as_ptr());
-        print_errors(132);
+        gl::UniformMatrix4fv(scale_loc, 1, gl::FALSE, scale.as_ptr());
+        // gl::Uniform2f(translation_loc, -1.0 - 2.0 / cols as f32, -1.0 - 2.0 / rows as f32);
+        // gl::Uniform2f(translation_loc, -1.0 * cols as f32 / 2.0, -1.0 * (rows + 1) as f32 / 2.0);
+        // gl::Uniform2f(translation_loc, mouse_pos.0, mouse_pos.1);
+        gl::Uniform2f(translation_loc, -10.0, -9.0);
         for r in 0..rows {
             for c in 0..cols {
                 let tile = &tiles[r][c];
@@ -145,11 +152,7 @@ fn main() {
             }
         }
 
-       
 
-        // red_factory.bind(0);
-        // tile.geometry.draw(gl::TRIANGLE_STRIP);
-        //  tile.draw_skin(&textures);
 
         print_errors(233);
 
