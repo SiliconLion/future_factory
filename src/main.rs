@@ -74,10 +74,14 @@ fn main() {
         tiles.push( Vec::with_capacity(cols));
         for c in 0..cols {
             tiles[r].push(Tile::new(r as i32, c as i32));
-            if counter % 2 == 0 {
+            if counter % 4 == 0 {
                 tiles[r][c].set_type(TileType::Factory(Factory::Red));
-            } else {
+            } else if counter %3 == 0 {
                 tiles[r][c].set_type(TileType::Factory(Factory::Blue));
+            } else if counter % 2 == 0 {
+                tiles[r][c].set_type(TileType::Factory(Factory::Green));
+            } else {
+                tiles[r][c].set_type(TileType::Empty);
             }
             counter += 1;
         }
@@ -105,7 +109,6 @@ fn main() {
     ]);
     print_errors(103);
 
-    let red_factory = Texture::new_from_file("src/textures/red_factory.png");
 
     let sampler_loc = gl::GetUniformLocation(tile_program.id, CString::new("ourTexture").unwrap().as_ptr());
     let transform_loc = gl::GetUniformLocation(tile_program.id, CString::new("transform").unwrap().as_ptr());
@@ -114,7 +117,8 @@ fn main() {
 
     // gl::PolygonMode( gl::FRONT_AND_BACK, gl::LINE );
 
-
+    gl::Enable(gl::BLEND);
+    gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
 
     while !window.should_close() {
         glfw.poll_events();

@@ -66,7 +66,7 @@ impl Tile {
                     match factory_color {
                         Factory::Red => &textures.red_factory,
                         Factory::Blue => &textures.blue_factory,
-                        Factory::Green => &textures.empty_texture,
+                        Factory::Green => &textures.green_factory,
                     }
                 }
                 _ => &textures.empty_texture
@@ -74,7 +74,7 @@ impl Tile {
 
             texture.bind(0);
             self.geometry.draw(gl::TRIANGLE_STRIP);
-            //should probably unbind
+            Texture::unbind(0);
         }
     }
 }

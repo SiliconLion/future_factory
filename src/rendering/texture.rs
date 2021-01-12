@@ -15,9 +15,19 @@ impl Texture {
     pub unsafe fn new(image: image::ImageBuffer<image::Rgba<u8>, std::vec::Vec<u8>>) -> Texture {
         
         let mut flipped_image = image.clone(); //kinda nasty but had to move fast and it worked
-        flip_vertical_in(&image, &mut flipped_image);
+        let _ = flip_vertical_in(&image, &mut flipped_image);
         
-        let mut texture = Texture {id: 0, width: flipped_image.width(), height: flipped_image.height()};
+        let mut id = 0;
+        gl::GenTextures(1, &mut id);
+
+        println!("{}", id);
+
+        let mut texture = Texture {
+            id, 
+            width: 
+            flipped_image.width(), 
+            height: flipped_image.height()
+        };
         texture.set_wrapping(gl::CLAMP_TO_BORDER, gl::CLAMP_TO_BORDER);
         texture.set_filtering(gl::LINEAR, gl::LINEAR);
 
@@ -36,6 +46,8 @@ impl Texture {
         ); 
 
         gl::GenerateMipmap(gl::TEXTURE_2D);
+
+        Texture::unbind(0);
 
         return texture;
     }
