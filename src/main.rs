@@ -86,7 +86,7 @@ fn main() {
     let textures = TileTextures {
         red_factory: Texture::new_from_file("src/textures/red_factory.png"),
         blue_factory: Texture::new_from_file("src/textures/blue_factory.png"),
-        green_factory: Texture::new_blank(),
+        green_factory: Texture::new_from_file("src/textures/green_factory.png"),
         empty_texture: Texture::new_blank()
     };
     print_errors(92);
