@@ -77,12 +77,15 @@ fn main() {
             if counter % 2 == 0 {
                 tiles[r][c].set_type(TileType::Factory(Factory::Red));
             } else {
-                tiles[r][c].set_type(TileType::Factory(Factory::Green));
+                tiles[r][c].set_type(TileType::Factory(Factory::Blue));
             }
-            
+            counter += 1;
         }
     }
 
+    let mut tile = Tile::new(0, 0);
+    tile.set_type(TileType::Factory(Factory::Red));
+    
     let textures = TileTextures {
         red_factory: Texture::new_from_file("src/textures/red_factory.png"),
         blue_factory: Texture::new_from_file("src/textures/blue_factory.png"),
@@ -91,19 +94,26 @@ fn main() {
     };
     print_errors(92);
     let tile_program = Shader::new( &vec![
-        shader::ShaderSource::new(
-            String::from("src/shader_src/tile.vert"), 
+        shader::ShaderSource::from_file(
+           "src/shader_src/tile.vert", 
             gl::VERTEX_SHADER
         ),
-        shader::ShaderSource::new(
-            String::from("src/shader_src/tile.frag"), 
+        shader::ShaderSource::from_file(
+            "src/shader_src/tile.frag",
             gl::FRAGMENT_SHADER
-        ),
+        )
     ]);
     print_errors(103);
 
+    let red_factory = Texture::new_from_file("src/textures/red_factory.png");
 
     let sampler_loc = gl::GetUniformLocation(tile_program.id, CString::new("ourTexture").unwrap().as_ptr());
+    let transform_loc = gl::GetUniformLocation(tile_program.id, CString::new("transform").unwrap().as_ptr());
+    let transform = Matrix4::from_scale(0.1);
+
+
+    // gl::PolygonMode( gl::FRONT_AND_BACK, gl::LINE );
+
 
 
     while !window.should_close() {
@@ -120,8 +130,10 @@ fn main() {
         clear_stencil();
 
         tile_program.bind();
+        print_errors(129);
         gl::Uniform1i(sampler_loc, 0); //tile.draw_skin binds the texture to 0
-        print_errors(122);
+        gl::UniformMatrix4fv(transform_loc, 1, gl::FALSE, transform.as_ptr());
+        print_errors(132);
         for r in 0..rows {
             for c in 0..cols {
                 let tile = &tiles[r][c];
@@ -129,6 +141,11 @@ fn main() {
             }
         }
 
+       
+
+        // red_factory.bind(0);
+        // tile.geometry.draw(gl::TRIANGLE_STRIP);
+        //  tile.draw_skin(&textures);
 
         print_errors(233);
 
