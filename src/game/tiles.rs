@@ -68,8 +68,23 @@ impl Tile {
                         Factory::Blue => &textures.blue_factory,
                         Factory::Green => &textures.green_factory,
                     }
-                }
-                _ => &textures.empty_texture
+                },
+                TileType::Pipe(_) => &textures.pipe_texture,
+                _ => return
+            };
+
+            texture.bind(0);
+            self.geometry.draw(gl::TRIANGLE_STRIP);
+            Texture::unbind(0);
+        }
+    }
+
+    pub fn draw_stencil(&self, stencils: &TileStencils) {
+        unsafe {
+            let texture = match &self.kind {
+                TileType::Factory(_) => return,
+                TileType::Empty => return,
+                TileType::Pipe(_) => &stencils.pipe_stencil
             };
 
             texture.bind(0);
@@ -83,6 +98,11 @@ pub struct TileTextures {
     pub red_factory: Texture,
     pub blue_factory: Texture,
     pub green_factory: Texture,
+    pub pipe_texture: Texture,
     pub empty_texture: Texture
     //more feilds to come
+}
+
+pub struct TileStencils {
+    pub pipe_stencil: Texture,
 }

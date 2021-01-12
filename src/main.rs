@@ -51,6 +51,10 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, tile
                         _ => {}
                     }
                 },
+                Key::F => {
+                    let tile = &mut tiles[*row][*col];
+                    tile.set_type(TileType::Pipe(Pipe::Blue));
+                },
                 _ => {}
             }
             
@@ -140,15 +144,26 @@ fn main() {
 
     println!("x: {}, y: {}", tiles[0][0].geometry.vertices[0].location[0], tiles[0][0].geometry.vertices[0].location[1]);
 
-    let mut tile = Tile::new(0, 0);
-    tile.set_type(TileType::Factory(Factory::Red));
     
     let textures = TileTextures {
         red_factory: Texture::new_from_file("src/textures/red_factory.png"),
         blue_factory: Texture::new_from_file("src/textures/blue_factory.png"),
         green_factory: Texture::new_from_file("src/textures/green_factory.png"),
+        pipe_texture: Texture::new_from_file("src/textures/pipe.png"),
         empty_texture: Texture::new_blank()
     };
+
+    let stencils = TileStencils {
+        pipe_stencil: Texture::new_from_file("src/textures/pipe_stencil.png")
+    };
+
+    let background = TexturedRect::new(
+        Texture::new_from_file("src/textures/shiny_green.jpg"),
+        4.0, 4.0,
+        -2.0, 2.0, 0.0
+    );
+
+
     print_errors(92);
     let tile_program = Shader::new( &vec![
         shader::ShaderSource::from_file(
@@ -160,6 +175,17 @@ fn main() {
             gl::FRAGMENT_SHADER
         )
     ]);
+
+    // let pipe_progrsm = Shader::new( &vec![
+    //     shader::ShaderSource::from_file(
+    //         "src/shader_src/pipe.vert", 
+    //          gl::VERTEX_SHADER
+    //      ),
+    //      shader::ShaderSource::from_file(
+    //          "src/shader_src/pipe.frag",
+    //          gl::FRAGMENT_SHADER
+    //      )
+    // ]);
     print_errors(103);
 
 
@@ -168,7 +194,7 @@ fn main() {
     let translation_loc = gl::GetUniformLocation(tile_program.id, CString::new("translation").unwrap().as_ptr());
     let scale = Matrix4::from_scale(2.0 / rows as f32);
     
-
+    let mut counter = 0.0;
 
     // gl::PolygonMode( gl::FRONT_AND_BACK, gl::LINE );
 
@@ -189,6 +215,8 @@ fn main() {
 
         tile_program.bind();
         print_errors(129);
+
+
         gl::Uniform1i(sampler_loc, 0); //tile.draw_skin binds the texture to 0
         gl::UniformMatrix4fv(scale_loc, 1, gl::FALSE, scale.as_ptr());
         // gl::Uniform2f(translation_loc, -1.0 - 2.0 / cols as f32, -1.0 - 2.0 / rows as f32);
@@ -202,6 +230,20 @@ fn main() {
             }
         }
 
+        start_stencil_writing();
+        for r in 0..rows {
+            for c in 0..cols {
+                let tile = &tiles[r][c];
+                tile.draw_stencil(&stencils);
+            }
+        }
+        stop_stencil_writing();
+
+        draw_where_stencil();
+        background.draw(sampler_loc);
+        disable_stencil();
+
+
 
 
         print_errors(233);
@@ -210,6 +252,11 @@ fn main() {
         // check and call events and swap the buffers
         window.swap_buffers();
 
+        if counter >= 2.0 {
+            counter = 0.0;
+        } else {
+            counter += 0.001;
+        }
 
     }
 
