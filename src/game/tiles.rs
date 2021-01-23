@@ -2,37 +2,44 @@ use crate::rendering::geometry::{Geometry, TexPoint};
 use crate::rendering::texture::{Texture};
 use crate::rendering::shader::Shader;
 use std::ffi::CString;
+use std::rc::Rc;
 
 pub enum TileType {
-    Factory(Factory),
+    Factory(Color),
     Empty,
-    Pipe(Pipe)
+    Pipe(Orientation)
 }
 
-pub enum Factory {
-    Red,
-    Green,
-    Blue
+// pub enum Factory {
+
+// }
+
+// pub struct Pipe {
+//     orientation: Orientaion
+// }
+
+pub enum Orientation {
+    Vertical,
+    Horizontal,
 }
 
-pub enum Pipe {
+pub enum Color {
     Red,
     Green, 
     Blue
 }
-
 
 pub struct Tile {
     pub kind: TileType,
     pub row: i32,
     pub col: i32,
     pub geometry: Geometry<TexPoint>,
-    // pub plain_texture: Texture,
-    // pub stencil_texture: Texture
+    pub texture: Rc<Texture>,
+    pub stencil: Option< Rc<Texture> >
 }
 
 impl Tile {
-    pub fn new(row: i32, col: i32) -> Tile {
+    pub fn new(row: i32, col: i32, kind: TileType, texture: Rc<Texture>, stencil: Option< Rc<Texture> >) -> Tile {
         let x = col as f32;
         let y = row as f32;
         let z = 0.0;
@@ -48,61 +55,108 @@ impl Tile {
 
         let geometry = unsafe { Geometry::from_verts_and_indices(gl::STATIC_DRAW, &vertices[..], &indices[..]) };
         return Tile {
-            kind: TileType::Empty,
+            kind,
             row, col,
-            geometry
+            geometry,
+            texture,
+            stencil
         }
     }
-    
-    pub fn set_type(&mut self, kind: TileType) {
-        self.kind = kind;
+
+    pub fn new_empty(board: &Board, row: i32, col: i32) -> Tile {
+        return Tile::new(row, col, TileType::Empty, board.textures.empty_texture.clone(), None);
+    }
+
+    pub fn new_factory(board: &Board, row: i32, col: i32, color: Color) -> Tile {
+        let texture = match color {
+            Color::Red => board.textures.red_factory.clone(),
+            Color::Blue => board.textures.blue_factory.clone(),
+            Color::Green => board.textures.green_factory.clone(),
+        };
+
+        return Tile::new(row, col, TileType::Factory(color), texture, None);
+    }
+
+    pub fn new_pipe(board: &Board, row: i32, col: i32, orientation: Orientation) -> Tile {
+        return Tile::new(
+            row, col, 
+            TileType::Pipe(orientation), 
+            board.textures.pipe_texture.clone(), 
+            Some(board.stencils.pipe_stencil.clone())
+        );
     }
 
     //Will need textures and shaders set up already.
-    pub fn draw_skin(&self, textures: &TileTextures) {
+    pub fn draw_texture(&self) {
         unsafe {
-            let texture = match &self.kind {
-                TileType::Factory(factory_color) => {
-                    match factory_color {
-                        Factory::Red => &textures.red_factory,
-                        Factory::Blue => &textures.blue_factory,
-                        Factory::Green => &textures.green_factory,
-                    }
-                },
-                TileType::Pipe(_) => &textures.pipe_texture,
-                _ => return
-            };
-
-            texture.bind(0);
+            self.texture.bind(0);
             self.geometry.draw(gl::TRIANGLE_STRIP);
             Texture::unbind(0);
         }
     }
 
-    pub fn draw_stencil(&self, stencils: &TileStencils) {
-        unsafe {
-            let texture = match &self.kind {
-                TileType::Factory(_) => return,
-                TileType::Empty => return,
-                TileType::Pipe(_) => &stencils.pipe_stencil
-            };
-
-            texture.bind(0);
-            self.geometry.draw(gl::TRIANGLE_STRIP);
-            Texture::unbind(0);
+    pub fn draw_stencil(&self) {
+        if let Some(stencil) = &self.stencil {
+            unsafe {
+                stencil.bind(0);
+                self.geometry.draw(gl::TRIANGLE_STRIP);
+                Texture::unbind(0);
+            }
         }
     }
+
 }
 
 pub struct TileTextures {
-    pub red_factory: Texture,
-    pub blue_factory: Texture,
-    pub green_factory: Texture,
-    pub pipe_texture: Texture,
-    pub empty_texture: Texture
-    //more feilds to come
+    pub red_factory: Rc<Texture>,
+    pub blue_factory: Rc<Texture>,
+    pub green_factory: Rc<Texture>,
+    pub pipe_texture: Rc<Texture>,
+    pub empty_texture: Rc<Texture>
+    //more feilds to come?
 }
 
 pub struct TileStencils {
-    pub pipe_stencil: Texture,
+    pub pipe_stencil: Rc<Texture>,
+}
+
+pub struct Board {
+    pub tiles: Vec<Vec<Tile>>,
+    pub textures: TileTextures,
+    pub stencils: TileStencils,
+    pub rows: u32, 
+    pub cols: u32
+}
+
+impl Board {
+    pub fn new(rows: u32, cols: u32, textures: TileTextures, stencils: TileStencils) -> Board{
+
+        let tiles: Vec<Vec<Tile>> = Vec::new();
+        let mut board = Board {
+            tiles, textures, stencils, rows, cols
+        };
+
+        //the way I do this is very crude, but its a one time thing, and i dont 
+        //want to make the rest of the api gross.
+        let mut tiles_copy = Vec::with_capacity(rows as  usize); 
+        for r in 0..rows {
+            tiles_copy.push(Vec::with_capacity(cols as usize));
+            for c in 0..cols {
+                tiles_copy[r as usize].push(Tile::new_empty(&board, r as i32, c as i32));
+            }
+        }
+        board.tiles = tiles_copy;
+
+        return board;
+    }
+
+    pub fn set_tile(&mut self, row: i32, col: i32, kind: TileType) {
+        let tile = match kind {
+            TileType::Factory(color) => Tile::new_factory(self, row, col, color),
+            TileType::Pipe(orientation) => Tile::new_pipe(self, row, col, orientation),
+            TileType::Empty => Tile::new_empty(self, row, col)
+        };
+
+        self.tiles[row as usize][col as usize] = tile;
+    }
 }

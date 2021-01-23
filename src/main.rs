@@ -5,6 +5,7 @@ extern crate glfw;
 use std::ffi::CString;
 use std::mem::size_of;
 use std::ffi::c_void;
+use std::rc::Rc;
 
 
 use glfw::{Action, Context, Key};
@@ -30,7 +31,7 @@ use pipeline::*;
 pub mod utilities;
 use utilities::*;
 
-fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, tiles: &mut Vec<Vec<Tile>>, row: &mut usize, col: &mut usize) {
+fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, board: &mut Board, row: &mut usize, col: &mut usize) {
     match event {
         glfw::WindowEvent::Key(key, _, Action::Press, _) => {
             match key {
@@ -40,20 +41,18 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, tile
                 Key::Up => {*row -= 1;},
                 Key::Down => {*row += 1;},
                 Key::Space => {
-                    let mut tile = &mut tiles[*row][*col];
 
                     let mut rng = rand::thread_rng();
                     let range = rng.gen_range(0..3);
                     match range {
-                        0 => tile.set_type(TileType::Factory(Factory::Red)),
-                        1 => tile.set_type(TileType::Factory(Factory::Green)),
-                        2 => tile.set_type(TileType::Factory(Factory::Blue)),
+                        0 => board.set_tile(*row as i32, *col as i32, TileType::Factory(Color::Red)),
+                        1 => board.set_tile(*row as i32, *col as i32, TileType::Factory(Color::Blue)),
+                        2 => board.set_tile(*row as i32, *col as i32, TileType::Factory(Color::Green)),
                         _ => {}
                     }
                 },
                 Key::F => {
-                    let tile = &mut tiles[*row][*col];
-                    tile.set_type(TileType::Pipe(Pipe::Blue));
+                    board.set_tile(*row as i32, *col as i32, TileType::Pipe(Orientation::Horizontal))
                 },
                 _ => {}
             }
@@ -111,51 +110,19 @@ fn main() {
     let mut selected_c = 0;
 
     unsafe{
-
-    let mut rows = 20;
-    let mut cols = 20;
-    let mut tiles: Vec<Vec<Tile>> = Vec::with_capacity(rows);
-    // let mut counter = 0;
-    // for r in 0..rows {
-    //     tiles.push( Vec::with_capacity(cols));
-    //     for c in 0..cols {
-    //         tiles[r].push(Tile::new(r as i32, c as i32));
-    //         if counter % 4 == 0 {
-    //             tiles[r][c].set_type(TileType::Factory(Factory::Red));
-    //         } else if counter %3 == 0 {
-    //             tiles[r][c].set_type(TileType::Factory(Factory::Blue));
-    //         } else if counter % 2 == 0 {
-    //             tiles[r][c].set_type(TileType::Factory(Factory::Green));
-    //         } else {
-    //             tiles[r][c].set_type(TileType::Empty);
-    //         }
-    //         counter += 1;
-    //     }
-    // }
-
-
-    for r in 0..rows {
-        tiles.push( Vec::with_capacity(cols));
-        for c in 0..cols {
-            tiles[r].push(Tile::new(r as i32, c as i32));
-            tiles[r][c].set_type(TileType::Empty);
-        }
-    }
-
-    println!("x: {}, y: {}", tiles[0][0].geometry.vertices[0].location[0], tiles[0][0].geometry.vertices[0].location[1]);
-
-    
     let textures = TileTextures {
-        red_factory: Texture::new_from_file("src/textures/red_factory.png"),
-        blue_factory: Texture::new_from_file("src/textures/blue_factory.png"),
-        green_factory: Texture::new_from_file("src/textures/green_factory.png"),
-        pipe_texture: Texture::new_from_file("src/textures/pipe.png"),
-        empty_texture: Texture::new_blank()
+        red_factory: Rc::new(Texture::new_from_file("src/textures/red_factory.png")),
+        blue_factory: Rc::new(Texture::new_from_file("src/textures/blue_factory.png")),
+        green_factory: Rc::new(Texture::new_from_file("src/textures/green_factory.png")),
+        pipe_texture: Rc::new(Texture::new_from_file("src/textures/pipe.png")),
+        empty_texture:Rc::new(Texture::new_blank())
     };
 
     let stencils = TileStencils {
-        pipe_stencil: Texture::new_from_file("src/textures/pipe_stencil.png")
+        pipe_stencil: Rc::new(Texture::new_from_file("src/textures/pipe_stencil.png"))
     };
+
+    let mut board = Board::new(20, 20, textures, stencils);
 
     let background = TexturedRect::new(
         Texture::new_from_file("src/textures/shiny_green.jpg"),
@@ -176,23 +143,13 @@ fn main() {
         )
     ]);
 
-    // let pipe_progrsm = Shader::new( &vec![
-    //     shader::ShaderSource::from_file(
-    //         "src/shader_src/pipe.vert", 
-    //          gl::VERTEX_SHADER
-    //      ),
-    //      shader::ShaderSource::from_file(
-    //          "src/shader_src/pipe.frag",
-    //          gl::FRAGMENT_SHADER
-    //      )
-    // ]);
     print_errors(103);
 
 
     let sampler_loc = gl::GetUniformLocation(tile_program.id, CString::new("ourTexture").unwrap().as_ptr());
     let scale_loc = gl::GetUniformLocation(tile_program.id, CString::new("scale").unwrap().as_ptr());
     let translation_loc = gl::GetUniformLocation(tile_program.id, CString::new("translation").unwrap().as_ptr());
-    let scale = Matrix4::from_scale(2.0 / rows as f32);
+    let scale = Matrix4::from_scale(2.0 / board.rows as f32);
     
     let mut counter = 0.0;
 
@@ -204,7 +161,7 @@ fn main() {
     while !window.should_close() {
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
-            handle_window_event(&mut window, event, &mut tiles, &mut selected_r, &mut selected_c);
+            handle_window_event(&mut window, event, &mut board, &mut selected_r, &mut selected_c);
         }
         let mouse_pos = get_normalized_cursor_pos(&window);
 
@@ -223,18 +180,18 @@ fn main() {
         // gl::Uniform2f(translation_loc, -1.0 * cols as f32 / 2.0, -1.0 * (rows + 1) as f32 / 2.0);
         // gl::Uniform2f(translation_loc, mouse_pos.0, mouse_pos.1);
         gl::Uniform2f(translation_loc, -10.0, -9.0);
-        for r in 0..rows {
-            for c in 0..cols {
-                let tile = &tiles[r][c];
-                tile.draw_skin(&textures);
+        for r in 0..board.rows {
+            for c in 0..board.cols {
+                let tile = &board.tiles[r as usize][c as usize];
+                tile.draw_texture();
             }
         }
 
         start_stencil_writing();
-        for r in 0..rows {
-            for c in 0..cols {
-                let tile = &tiles[r][c];
-                tile.draw_stencil(&stencils);
+        for r in 0..board.rows {
+            for c in 0..board.cols {
+                let tile = &board.tiles[r as usize][c as usize];
+                tile.draw_stencil();
             }
         }
         stop_stencil_writing();
