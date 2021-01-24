@@ -5,6 +5,7 @@ extern crate glfw;
 use std::ffi::CString;
 use std::mem::size_of;
 use std::ffi::c_void;
+use std::env::current_dir;
 use std::rc::Rc;
 
 
@@ -87,6 +88,9 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, boar
 }
 
 fn main() {
+    let path = current_dir().unwrap();
+    println!("The current directory is {}", path.display());
+
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
 
     glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
@@ -110,22 +114,25 @@ fn main() {
     let mut selected_c = 0;
 
     unsafe{
+    let _ = Texture::new_from_file("textures/red_factory.png");
+
     let textures = TileTextures {
-        red_factory: Rc::new(Texture::new_from_file("src/textures/red_factory.png")),
-        blue_factory: Rc::new(Texture::new_from_file("src/textures/blue_factory.png")),
-        green_factory: Rc::new(Texture::new_from_file("src/textures/green_factory.png")),
-        pipe_texture: Rc::new(Texture::new_from_file("src/textures/pipe.png")),
+        red_factory: Rc::new(Texture::new_from_file("textures/red_factory.png")),
+        blue_factory: Rc::new(Texture::new_from_file("textures/blue_factory.png")),
+        green_factory: Rc::new(Texture::new_from_file("textures/green_factory.png")),
+        pipe_texture: Rc::new(Texture::new_from_file("textures/pipe.png")),
         empty_texture:Rc::new(Texture::new_blank())
     };
+    println!("textures passed");
 
     let stencils = TileStencils {
-        pipe_stencil: Rc::new(Texture::new_from_file("src/textures/pipe_stencil.png"))
+        pipe_stencil: Rc::new(Texture::new_from_file("textures/pipe_stencil.png"))
     };
 
     let mut board = Board::new(20, 20, textures, stencils);
 
     let background = TexturedRect::new(
-        Texture::new_from_file("src/textures/shiny_green.jpg"),
+        Texture::new_from_file("textures/shiny_green.jpg"),
         4.0, 4.0,
         -2.0, 2.0, 0.0
     );
@@ -134,11 +141,11 @@ fn main() {
     print_errors(92);
     let tile_program = Shader::new( &vec![
         shader::ShaderSource::from_file(
-           "src/shader_src/tile.vert", 
+           "shader_src/tile.vert", 
             gl::VERTEX_SHADER
         ),
         shader::ShaderSource::from_file(
-            "src/shader_src/tile.frag",
+            "shader_src/tile.frag",
             gl::FRAGMENT_SHADER
         )
     ]);
@@ -187,18 +194,18 @@ fn main() {
             }
         }
 
-        start_stencil_writing();
+        // start_stencil_writing();
         for r in 0..board.rows {
             for c in 0..board.cols {
                 let tile = &board.tiles[r as usize][c as usize];
                 tile.draw_stencil();
             }
         }
-        stop_stencil_writing();
+        // stop_stencil_writing();
 
-        draw_where_stencil();
-        background.draw(sampler_loc);
-        disable_stencil();
+        // draw_where_stencil();
+        // background.draw(sampler_loc);
+        // disable_stencil();
 
 
 

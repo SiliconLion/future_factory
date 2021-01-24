@@ -53,7 +53,9 @@ impl Texture {
     }
 
     pub unsafe fn new_from_file<S: Into<String>>(path: S) -> Texture {
-        let image = open(path.into()).unwrap().into_rgba8();
+        let path: String = path.into();
+        println!("{}", path);
+        let image = open(path).unwrap().into_rgba8();
         return Texture::new(image);
     }
 
