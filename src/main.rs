@@ -181,6 +181,7 @@ fn main() {
     gl::Enable(gl::BLEND);
     gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
 
+    let mut frames: usize = 0;
     while !window.should_close() {
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
@@ -232,8 +233,10 @@ fn main() {
 
         skin_program.bind();
         gl::Uniform1i(skin_sampler_loc, 0);
-        gl::UniformMatrix4fv(skin_scale_loc, 1, gl::FALSE, Matrix4::identity().as_ptr());
         gl::Uniform2f(skin_translation_loc, 0.0, 0.0);
+
+        let magnitude = 1.0 + ((frames%120) as i32 -60).abs() as f32/ 60.0;
+        gl::UniformMatrix4fv(skin_scale_loc, 1, gl::FALSE, Matrix4::from_scale(magnitude).as_ptr());
 
         draw_where_stencil();
         background.draw(skin_sampler_loc);
@@ -253,7 +256,7 @@ fn main() {
         } else {
             counter += 0.001;
         }
-
+        frames += 1;
     }
 
     }
