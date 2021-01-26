@@ -5,6 +5,9 @@ extern crate glfw;
 use std::ffi::CString;
 use std::mem::size_of;
 use std::ffi::c_void;
+use std::env::current_dir;
+use std::rc::Rc;
+
 
 use glfw::{Action, Context, Key};
 use gl::*;
@@ -12,36 +15,82 @@ use gl::*;
 use rand::prelude::*;
 
 use cgmath::prelude::*;
-use cgmath::{Matrix4, Rad};
+use cgmath::{Matrix4, Rad, Vector3};
 
-pub mod shader; 
-pub mod geometry; 
-pub mod utilities;
-pub mod texture; 
-pub mod primitives;
-pub mod pipeline;
+pub mod game;
+use game::tiles::*;
+
+pub mod rendering;
+use rendering::*;
 
 use geometry::*;
-use utilities::*;
+use shader::*;
 use texture::Texture;
 use primitives::*;
 use pipeline::*;
 
-fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
+pub mod utilities;
+use utilities::*;
+
+fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, board: &mut Board, row: &mut usize, col: &mut usize) {
     match event {
-        glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-            window.set_should_close(true)
+        glfw::WindowEvent::Key(key, _, Action::Press, _) => {
+            match key {
+                Key::Escape => window.set_should_close(true),
+                Key::Right => {*col += 1;},
+                Key::Left => {*col -= 1},
+                Key::Up => {*row -= 1;},
+                Key::Down => {*row += 1;},
+                Key::Space => {
+
+                    let mut rng = rand::thread_rng();
+                    let range = rng.gen_range(0..3);
+                    match range {
+                        0 => board.set_tile(*row as i32, *col as i32, TileType::Factory(Color::Red)),
+                        1 => board.set_tile(*row as i32, *col as i32, TileType::Factory(Color::Blue)),
+                        2 => board.set_tile(*row as i32, *col as i32, TileType::Factory(Color::Green)),
+                        _ => {}
+                    }
+                },
+                Key::F => {
+                    board.set_tile(*row as i32, *col as i32, TileType::Pipe(Orientation::Horizontal))
+                },
+                _ => {}
+            }
+            
         },
         glfw::WindowEvent::FramebufferSize(width, height)  => {
             unsafe {
                 gl::Viewport(0,0, width, height);
             }
+        },
+        glfw::WindowEvent::MouseButton(_, action, _) => {
+            // if action == glfw::Action::Press {
+            //     println!("here!");
+            //     let mouse_pos = get_normalized_cursor_pos(&window);
+            //     let (row, col) = get_tile_coords(mouse_pos.0, mouse_pos.1);
+
+            //     let mut tile = &mut tiles[row][col];
+
+            //     let mut rng = rand::thread_rng();
+            //     let range = rng.gen_range(0..3);
+            //     match range {
+            //         0 => tile.set_type(TileType::Factory(Factory::Red)),
+            //         1 => tile.set_type(TileType::Factory(Factory::Green)),
+            //         2 => tile.set_type(TileType::Factory(Factory::Blue)),
+            //         _ => {}
+            //     }
+            // }
+
         }
         _ => {}
     }
 }
 
 fn main() {
+    let path = current_dir().unwrap();
+    println!("The current directory is {}", path.display());
+
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
 
     glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
@@ -51,8 +100,9 @@ fn main() {
     let (mut window, events) = glfw.create_window(300, 300, "Hello this is window", glfw::WindowMode::Windowed)
         .expect("Failed to create GLFW window.");
 
-    window.set_key_polling(true);
-    window.set_framebuffer_size_polling(true);
+    // window.set_key_polling(true);
+    // window.set_framebuffer_size_polling(true);
+    window.set_all_polling(true);
     window.make_current();
 
     // the supplied function must be of the type:
@@ -60,170 +110,150 @@ fn main() {
     // `window` is a glfw::Window
     gl::load_with(|s| window.get_proc_address(s) as *const _);
 
-
+    let mut selected_r = 0;
+    let mut selected_c = 0;
 
     unsafe{
-    
-    let mut rng = rand::thread_rng();
+    let _ = Texture::new_from_file("textures/red_factory.png");
 
-    let width_count: usize = 400;
-    let height_count: usize = 400;
-    let mut vertices = Vec::with_capacity( (width_count * height_count) as usize );
-    for i in 0..width_count +1{
-        for j in 0..height_count +1{
-            vertices.push(
-                PointWithNorm {
-                    //x and y range from -1 to 1. 
-                    //x starts at -1 and increases, and y starts at 1 and decreases
-                    location : [ 
-                        (2.0 / width_count as f32 ) * i as f32 - 1.0,
-                         1.0 - ((2.0 / height_count as f32 ) * j as f32) , 
-                         0.0
-                    ],
-                    norm: [rng.gen(), rng.gen(), rng.gen()]
-                }
-            );
-        }
-    }
+    let textures = TileTextures {
+        red_factory: Rc::new(Texture::new_from_file("textures/red_factory.png")),
+        blue_factory: Rc::new(Texture::new_from_file("textures/blue_factory.png")),
+        green_factory: Rc::new(Texture::new_from_file("textures/green_factory.png")),
+        pipe_texture: Rc::new(Texture::new_from_file("textures/pipe.png")),
+        empty_texture:Rc::new(Texture::new_blank())
+    };
+    println!("textures passed");
 
-    let mut indices = Vec::with_capacity( (width_count * height_count) as usize );
-    for row in 0..height_count {
-        for col in 0..width_count {
-            //first triangle in rect
-            indices.push(coords_to_index(row,     col,      width_count +1));
-            indices.push(coords_to_index(row + 1, col,      width_count+1));
-            indices.push(coords_to_index(row,     col + 1 , width_count+1));
+    let stencils = TileStencils {
+        pipe_stencil: Rc::new(Texture::new_from_file("textures/pipe_stencil.png"))
+    };
 
-            //second tri in rect
-            indices.push(coords_to_index(row,     col + 1,  width_count+1));
-            indices.push(coords_to_index(row + 1, col,      width_count+1));
-            indices.push(coords_to_index(row + 1, col + 1 , width_count+1));
-        }
-    }
-    let indices: Vec<u32> = indices.iter().map( |&e| e as u32).collect();
+    let mut board = Board::new(20, 20, textures, stencils);
+
+    let background = TexturedRect::new(
+        Texture::new_from_file("textures/shiny_green.jpg"),
+        4.0, 4.0,
+        -2.0, 2.0, 0.0
+    );
 
 
-    let background = Geometry::from_verts_and_indices(
-        gl::STATIC_DRAW,
-        &vertices[..],
-        &indices[..]
-    ); 
-
-    print_errors(104);
-
-
-
-    let vertex_source = shader::ShaderSource::from_file(
-            "src/shader_src/vertex.vert",
+    print_errors(92);
+    let skin_program = Shader::new( &vec![
+        shader::ShaderSource::from_file(
+           "shader_src/tile.vert", 
             gl::VERTEX_SHADER
-        );
-    let frag_source = shader::ShaderSource::from_file(
-        "src/shader_src/fragment.frag",
-        gl::FRAGMENT_SHADER
-    );
+        ),
+        shader::ShaderSource::from_file(
+            "shader_src/tile.frag",
+            gl::FRAGMENT_SHADER
+        )
+    ]);
 
-    let background_program = shader::Shader::new( &vec![vertex_source, frag_source]);
-    let transformation_loc = gl::GetUniformLocation(
-        background_program.id, 
-        CString::new("transformation").unwrap().as_ptr()
-    );
+    let stencil_program = Shader::new( &vec![
+        shader::ShaderSource::from_file(
+           "shader_src/stencil.vert", 
+            gl::VERTEX_SHADER
+        ),
+        shader::ShaderSource::from_file(
+            "shader_src/stencil.frag",
+            gl::FRAGMENT_SHADER
+        )
+    ]);
+
+    print_errors(103);
 
 
-    print_errors(127);
+    let skin_sampler_loc = gl::GetUniformLocation(skin_program.id, CString::new("ourTexture").unwrap().as_ptr());
+    let skin_scale_loc = gl::GetUniformLocation(skin_program.id, CString::new("scale").unwrap().as_ptr());
+    let skin_translation_loc = gl::GetUniformLocation(skin_program.id, CString::new("translation").unwrap().as_ptr());
 
-    let rect_verts = [
-        ThreePoint {data:[-0.25, 0.25, 0.0]},
-        ThreePoint {data:[-0.25, -0.25, 0.0]},
-        ThreePoint {data:[0.25, 0.25, 0.0]},
-        ThreePoint {data:[0.25, -0.25, 0.0]}
-    ];
-    //triangle strip indexing
-    let rect_indices = [0,1,2,3];
+    let stencil_sampler_loc = gl::GetUniformLocation(skin_program.id, CString::new("ourTexture").unwrap().as_ptr());
+    let stencil_scale_loc = gl::GetUniformLocation(skin_program.id, CString::new("scale").unwrap().as_ptr());
+    let stencil_translation_loc = gl::GetUniformLocation(skin_program.id, CString::new("translation").unwrap().as_ptr());
 
-    let rect = Geometry::from_verts_and_indices(
-        gl::STATIC_DRAW,
-        &rect_verts[..],
-        &rect_indices[..]
-    );
-
-    let rect_vert_shader = shader::ShaderSource::from_file(
-        "src/shader_src/simple.vert",
-        gl::VERTEX_SHADER
-    );
-
-    let rect_frag_shader = shader::ShaderSource::from_file(
-        "src/shader_src/simple.frag",
-        gl::FRAGMENT_SHADER
-    );
-
-    let rect_program = shader::Shader::new( &vec![rect_vert_shader, rect_frag_shader]);
-    let translation_loc = gl::GetUniformLocation(rect_program.id, CString::new("translation").unwrap().as_ptr());
-
-    let gold_texture = Texture::new("src/textures/factory_1.png");
-    let tex_rect = TexturedRect::new(gold_texture, 0.6, 0.7, 0.3, 0.2, 0.0);
-    let tex_rect_vert_shader = shader::ShaderSource::from_file(
-        "src/shader_src/texture.vert",
-        gl::VERTEX_SHADER
-    );
-    let tex_rect_frag_shader = shader::ShaderSource::from_file(
-        "src/shader_src/texture.frag",
-        gl::FRAGMENT_SHADER
-    );
-    let tex_rect_program = shader::Shader::new( &vec![tex_rect_vert_shader, tex_rect_frag_shader]);
-
+    let scale = Matrix4::from_scale(2.0 / board.rows as f32);
     
-    let mut counter: f32 = 0.0;
+    let mut counter = 0.0;
+
+    // gl::PolygonMode( gl::FRONT_AND_BACK, gl::LINE );
+
+    gl::Enable(gl::BLEND);
+    gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+
     while !window.should_close() {
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
-            handle_window_event(&mut window, event);
+            handle_window_event(&mut window, event, &mut board, &mut selected_r, &mut selected_c);
         }
         let mouse_pos = get_normalized_cursor_pos(&window);
 
 
-
         gl::ClearColor(0.2, 0.3, 0.3, 1.0);
         gl::Clear(gl::COLOR_BUFFER_BIT);
-        
         clear_stencil();
 
+        skin_program.bind();
+        print_errors(129);
+
+
+        gl::Uniform1i(skin_sampler_loc, 0); //tile.draw_skin binds the texture to 0
+        gl::UniformMatrix4fv(skin_scale_loc, 1, gl::FALSE, scale.as_ptr());
+        // gl::Uniform2f(translation_loc, -1.0 - 2.0 / cols as f32, -1.0 - 2.0 / rows as f32);
+        // gl::Uniform2f(translation_loc, -1.0 * cols as f32 / 2.0, -1.0 * (rows + 1) as f32 / 2.0);
+        // gl::Uniform2f(translation_loc, mouse_pos.0, mouse_pos.1);
+        gl::Uniform2f(skin_translation_loc, -10.0, -9.0);
+        for r in 0..board.rows {
+            for c in 0..board.cols {
+                let tile = &board.tiles[r as usize][c as usize];
+                tile.draw_texture();
+            }
+        }
+        skin_program.unbind();
+
+
+
+        stencil_program.bind();
+        gl::Uniform1i(stencil_sampler_loc, 0);
+        gl::UniformMatrix4fv(stencil_scale_loc, 1, gl::FALSE, scale.as_ptr());
+        gl::Uniform2f(stencil_translation_loc, -10.0, -9.0);
+
         start_stencil_writing();
-
-        rect_program.bind();
-        gl::Uniform2f(translation_loc, mouse_pos.0, mouse_pos.1);
-        rect.draw(gl::TRIANGLE_STRIP);
-        rect_program.unbind();
-        
+        for r in 0..board.rows {
+            for c in 0..board.cols {
+                let tile = &board.tiles[r as usize][c as usize];
+                tile.draw_stencil();
+            }
+        }
         stop_stencil_writing();
+        stencil_program.unbind();
 
-//Draw what the stencil is applied to  (the background)
+        print_errors(231);
 
-        let transformation = Matrix4::from_scale(4.0) * Matrix4::from_angle_z(Rad(counter));
+        skin_program.bind();
+        gl::Uniform1i(skin_sampler_loc, 0);
+        gl::UniformMatrix4fv(skin_scale_loc, 1, gl::FALSE, Matrix4::identity().as_ptr());
+        gl::Uniform2f(skin_translation_loc, 0.0, 0.0);
 
         draw_where_stencil();
-
-        background_program.bind();
-        gl::UniformMatrix4fv(transformation_loc, 1, gl::FALSE, transformation.as_ptr());
-        background.draw(gl::TRIANGLES);
-        background_program.unbind();
-        
-        disable_stencil();
-
-//draw the textured rect
-        tex_rect_program.bind();
-        let sampler_loc = gl::GetUniformLocation(tex_rect_program.id, CString::new("ourTexture").unwrap().as_ptr());
-        tex_rect.draw(sampler_loc);
-        tex_rect_program.unbind();
+        background.draw(skin_sampler_loc);
+        disable_stencil_test();
+        skin_program.unbind();
 
 
 
-        print_errors(233);
+        print_errors(244);
 
 
         // check and call events and swap the buffers
         window.swap_buffers();
 
-        counter += 0.01;
+        if counter >= 2.0 {
+            counter = 0.0;
+        } else {
+            counter += 0.001;
+        }
+
     }
 
     }
@@ -240,6 +270,15 @@ fn get_normalized_cursor_pos(window: &glfw::Window) -> (f32, f32) {
         (mouse_pos.0 / screen_dims.0) * 2.0 - 1.0,
         1.0 - (mouse_pos.1 / screen_dims.1) * 2.0 
     );
+}
+
+fn get_tile_coords(screen_x: f32, screen_y: f32) -> (usize, usize){
+    let tile_width = 1.0 / 20.0;
+    let tile_height = 1.0 / 20.0;
+    let row = ( (screen_y + 1.0) / tile_height ).floor() as usize; 
+    let col = ( (screen_x + 1.0) / tile_width ).floor() as usize; 
+
+    return (row, col);
 }
 
 

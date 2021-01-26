@@ -77,6 +77,13 @@ impl Shader {
         
         shaders.iter().for_each( |&id| gl::DeleteShader(id) );
 
+        gl::ValidateProgram(shader.id);
+        let mut status: i32 = 0;
+        gl::GetProgramiv(shader.id, gl::VALIDATE_STATUS, &mut status);
+        if status as u8 == gl::FALSE {
+            println!("program not valid");
+        }
+
         return shader;
     }
 

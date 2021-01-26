@@ -24,11 +24,16 @@ pub unsafe fn stop_stencil_writing() {
 }
 
 pub unsafe fn draw_where_stencil() {
+    gl::Enable(gl::STENCIL_TEST);
     //If the mask value at that fragment is gl::Equal to 1 after its && with 0xFF,
     //draw the fragment
     gl::StencilFunc(gl::EQUAL, 1, 0xFF); 
 }
 
-pub unsafe fn disable_stencil() {
+pub unsafe fn disable_stencil_test() {
     gl::Disable(gl::STENCIL_TEST);
+}
+
+pub unsafe fn enable_stencil_test() {
+    gl::Enable(gl::STENCIL_TEST);
 }
