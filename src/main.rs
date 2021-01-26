@@ -139,7 +139,7 @@ fn main() {
 
 
     print_errors(92);
-    let tile_program = Shader::new( &vec![
+    let skin_program = Shader::new( &vec![
         shader::ShaderSource::from_file(
            "shader_src/tile.vert", 
             gl::VERTEX_SHADER
@@ -150,12 +150,28 @@ fn main() {
         )
     ]);
 
+    let stencil_program = Shader::new( &vec![
+        shader::ShaderSource::from_file(
+           "shader_src/stencil.vert", 
+            gl::VERTEX_SHADER
+        ),
+        shader::ShaderSource::from_file(
+            "shader_src/stencil.frag",
+            gl::FRAGMENT_SHADER
+        )
+    ]);
+
     print_errors(103);
 
 
-    let sampler_loc = gl::GetUniformLocation(tile_program.id, CString::new("ourTexture").unwrap().as_ptr());
-    let scale_loc = gl::GetUniformLocation(tile_program.id, CString::new("scale").unwrap().as_ptr());
-    let translation_loc = gl::GetUniformLocation(tile_program.id, CString::new("translation").unwrap().as_ptr());
+    let skin_sampler_loc = gl::GetUniformLocation(skin_program.id, CString::new("ourTexture").unwrap().as_ptr());
+    let skin_scale_loc = gl::GetUniformLocation(skin_program.id, CString::new("scale").unwrap().as_ptr());
+    let skin_translation_loc = gl::GetUniformLocation(skin_program.id, CString::new("translation").unwrap().as_ptr());
+
+    let stencil_sampler_loc = gl::GetUniformLocation(skin_program.id, CString::new("ourTexture").unwrap().as_ptr());
+    let stencil_scale_loc = gl::GetUniformLocation(skin_program.id, CString::new("scale").unwrap().as_ptr());
+    let stencil_translation_loc = gl::GetUniformLocation(skin_program.id, CString::new("translation").unwrap().as_ptr());
+
     let scale = Matrix4::from_scale(2.0 / board.rows as f32);
     
     let mut counter = 0.0;
@@ -177,40 +193,56 @@ fn main() {
         gl::Clear(gl::COLOR_BUFFER_BIT);
         clear_stencil();
 
-        tile_program.bind();
+        skin_program.bind();
         print_errors(129);
 
 
-        gl::Uniform1i(sampler_loc, 0); //tile.draw_skin binds the texture to 0
-        gl::UniformMatrix4fv(scale_loc, 1, gl::FALSE, scale.as_ptr());
+        gl::Uniform1i(skin_sampler_loc, 0); //tile.draw_skin binds the texture to 0
+        gl::UniformMatrix4fv(skin_scale_loc, 1, gl::FALSE, scale.as_ptr());
         // gl::Uniform2f(translation_loc, -1.0 - 2.0 / cols as f32, -1.0 - 2.0 / rows as f32);
         // gl::Uniform2f(translation_loc, -1.0 * cols as f32 / 2.0, -1.0 * (rows + 1) as f32 / 2.0);
         // gl::Uniform2f(translation_loc, mouse_pos.0, mouse_pos.1);
-        gl::Uniform2f(translation_loc, -10.0, -9.0);
+        gl::Uniform2f(skin_translation_loc, -10.0, -9.0);
         for r in 0..board.rows {
             for c in 0..board.cols {
                 let tile = &board.tiles[r as usize][c as usize];
                 tile.draw_texture();
             }
         }
+        skin_program.unbind();
 
-        // start_stencil_writing();
+
+
+        stencil_program.bind();
+        gl::Uniform1i(stencil_sampler_loc, 0);
+        gl::UniformMatrix4fv(stencil_scale_loc, 1, gl::FALSE, scale.as_ptr());
+        gl::Uniform2f(stencil_translation_loc, -10.0, -9.0);
+
+        start_stencil_writing();
         for r in 0..board.rows {
             for c in 0..board.cols {
                 let tile = &board.tiles[r as usize][c as usize];
                 tile.draw_stencil();
             }
         }
-        // stop_stencil_writing();
+        stop_stencil_writing();
+        stencil_program.unbind();
 
-        // draw_where_stencil();
-        // background.draw(sampler_loc);
-        // disable_stencil();
+        print_errors(231);
+
+        skin_program.bind();
+        gl::Uniform1i(skin_sampler_loc, 0);
+        gl::UniformMatrix4fv(skin_scale_loc, 1, gl::FALSE, Matrix4::identity().as_ptr());
+        gl::Uniform2f(skin_translation_loc, 0.0, 0.0);
+
+        draw_where_stencil();
+        background.draw(skin_sampler_loc);
+        disable_stencil_test();
+        skin_program.unbind();
 
 
 
-
-        print_errors(233);
+        print_errors(244);
 
 
         // check and call events and swap the buffers
